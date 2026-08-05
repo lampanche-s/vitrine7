@@ -1,0 +1,17 @@
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\AgentConfig.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\BridgeClient.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\BridgeDtos.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\DeviceToken.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\DeviceTokenStore.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PagBankAgentApplication.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PagBankAgentRunner.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentOutcomeMode.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentTerminalCapabilities.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentTerminalDriver.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentTerminalDriverFactory.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentTerminalDriverMode.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PaymentTerminalDriverSelection.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PendingResultStore.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\PlugPagPaymentTerminalDriver.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\ProviderPaymentStatus.java
+C:\Intern\Projetos\Projetos Definitivos\Vitrine 7\pagbank-agent\src\main\java\br\com\vitrine7\pagbankagent\SimulatedPaymentTerminalDriver.java

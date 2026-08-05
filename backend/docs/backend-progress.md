@@ -1,0 +1,511 @@
+# Backend Progress
+
+## Estado Atual
+
+- Passo 12B implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v23; schema atual: v24.
+- Migration criada: `V24__create_payment_terminal_bridge.sql`.
+- Bridge seguro backend/agente implementado com:
+  - dispositivos vinculados a provider/perfil, status efetivo online/offline, capacidades e referencia externa;
+  - pareamento por codigo de uso unico e curta duracao, token aleatorio armazenado somente como SHA-256 e rotacionado a cada novo pareamento;
+  - autenticacao dedicada por `X-Terminal-Device-Token`, isolada de JWT/sessao e sem expor token ou hash nas consultas administrativas;
+  - heartbeat autenticado, revogacao imediata e cancelamento/falha controlada de comandos financeiros pendentes;
+  - fila persistente de comandos com long polling, `FOR UPDATE SKIP LOCKED`, tentativas de entrega, ACK, estados intermediarios e resultado final normalizado;
+  - selecao por provider, perfil, referencia, presenca recente e `paymentMethods` declarado nas capacidades;
+  - resultado final idempotente, conflito para resultado divergente e bloqueio de resultado tardio, de outro dispositivo ou com dados sensiveis;
+  - timeout persistente com job de expiracao e conciliacao da transacao/pagamento/checkout;
+  - atualizacao atomica do comando e do snapshot de entrega antes da conclusao financeira;
+  - payload minimo sem credenciais, segredo, PAN, CVV, trilha, PIN ou cookie.
+- Endpoints administrativos adicionados em `/api/v1/payment-terminal/devices`, protegidos por `admin:payment-config` e CSRF nas mutacoes.
+- Contrato do agente adicionado em `/api/v1/payment-terminal/bridge`: `pair`, `heartbeat`, `commands/next`, `ack` e `result`.
+- O adapter `SIMULATOR` agora suporta `transport=IN_PROCESS` (compativel com o fluxo anterior) e `transport=DEVICE_BRIDGE` (fila persistente).
+- Catalogo preservado: somente `SIMULATOR` e `PAGBANK` permanecem visiveis; `PAGBANK` continua `IMPLEMENTATION_PENDING`.
+- Pesquisa oficial registrada em `docs/payment-provider-integration-matrix.md`: PagBank exige execucao junto ao terminal/agente nativo e permanece pendente.
+- Validacao dirigida do Passo 12B cobriu 61 verificacoes funcionais, concorrentes, de seguranca e SQL, incluindo:
+  - aplicacao da migration v24 e reinicio com schema atualizado;
+  - pareamento, expiracao/inutilizacao de codigo, rotacao de token, heartbeat e status offline;
+  - `401` para token ausente/invalido/antigo, `403` para token revogado, segregacao de JWT e permissoes administrativas;
+  - long polling vazio com `204` e duas reservas concorrentes sem duplicar comando;
+  - ACK, estados `PENDING`/`PROCESSING`, aprovacao, recusa/erro, expiracao, revogacao e resultado tardio/estrangeiro;
+  - replay identico sem efeito duplicado e conflito para resultado divergente;
+  - fluxo `DEVICE_BRIDGE` aprovado finalizando checkout e vinculando dispositivo/comando na transacao;
+  - indisponibilidade do agente sem aprovacao indevida;
+  - compatibilidade do `IN_PROCESS`, recibos/fiscal e regras anteriores preservadas pelo pacote completo;
+  - logs HTTP reduzidos a `INFO` no perfil dev para nao registrar DTOs, headers de autenticacao, codigo de pareamento ou token;
+  - limpeza da massa `codex12b202607162321`, reposicao do estoque consumido e restauracao do simulador em `IN_PROCESS/APPROVED`.
+
+- Passo 12A implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v22; schema atual: v23.
+- Migration criada: `V23__create_payment_provider_profiles.sql`.
+- Tabela criada: `payment_provider_profiles`, com provider, ambiente, habilitado/ativo, referencias publicas, `public_configuration` JSONB, credenciais criptografadas, nonce, versao de chave, versao de configuracao, usuarios de criacao/alteracao e optimistic locking.
+- Transacoes de terminal evoluidas com snapshot historico do provider:
+  - `provider_profile_id`;
+  - `provider_code_snapshot`;
+  - `provider_environment_snapshot`;
+  - `provider_configuration_version`;
+  - status/reference/request/failure normalizados;
+  - `provider_metadata` JSONB seguro;
+  - `last_provider_sync_at`.
+- Catalogo central atual exposto para `SIMULATOR` e `PAGBANK`:
+  - `SIMULATOR = AVAILABLE`;
+  - providers reais = `IMPLEMENTATION_PENDING`;
+  - somente o simulador possui adapter registrado.
+- Adapter SPI criado:
+  - `PaymentProviderAdapter`;
+  - `ProviderConfiguration`;
+  - `ProviderPaymentCommand`;
+  - `ProviderPaymentResult`;
+  - comandos de consulta/cancelamento preparados.
+- Registry implementado por provider code:
+  - falha na inicializacao se houver adapter duplicado;
+  - exige adapter do `SIMULATOR`;
+  - retorna `PAYMENT_PROVIDER_ADAPTER_NOT_AVAILABLE` para provider sem adapter.
+- Criptografia de credenciais implementada com AES-256-GCM:
+  - chave mestra externa por `app.payment-providers.secrets-key` ou `VITRINE7_PROVIDER_SECRETS_KEY`;
+  - chave Base64 de 32 bytes;
+  - nonce aleatorio por gravacao;
+  - sem persistir/logar chave, ciphertext, nonce ou valores descriptografados;
+  - sem chave, a aplicacao sobe e o simulador funciona, mas gravacao de credenciais retorna `PAYMENT_PROVIDER_SECRETS_KEY_NOT_CONFIGURED`.
+- Endpoints administrativos adicionados:
+  - `GET /api/v1/payment-terminal/providers`;
+  - `GET /api/v1/payment-terminal/provider-profiles`;
+  - `GET /api/v1/payment-terminal/provider-profiles/{id}`;
+  - `POST /api/v1/payment-terminal/provider-profiles`;
+  - `PUT /api/v1/payment-terminal/provider-profiles/{id}`;
+  - `POST /api/v1/payment-terminal/provider-profiles/{id}/activate`;
+  - `POST /api/v1/payment-terminal/provider-profiles/{id}/test`;
+  - `GET /api/v1/payment-terminal/provider-status`.
+- Endpoint antigo `GET/PUT /api/v1/payment-terminal/settings` preservado como fachada de compatibilidade para a configuracao do simulador.
+- Seleção dinâmica implementada por `ActivePaymentProviderService`:
+  - cada tentativa resolve o perfil ativo;
+  - valida perfil habilitado e adapter disponivel;
+  - nao guarda credenciais descriptografadas em cache global;
+  - snapshot historico e gravado por transacao.
+- Compatibilidade operacional validada:
+  - terminal simulado aprovado finaliza checkout e grava payment/transaction aprovados;
+  - terminal simulado recusado nao finaliza checkout e grava failure code seguro;
+  - replay por idempotency key nao duplica payment nem transaction;
+  - configuracao dinamica do simulador muda novas transacoes sem restart e preserva snapshots antigos.
+- Auditoria administrativa segura adicionada para:
+  - `PAYMENT_PROVIDER_PROFILE_CREATED`;
+  - `PAYMENT_PROVIDER_PROFILE_UPDATED`;
+  - `PAYMENT_PROVIDER_PROFILE_ACTIVATED`;
+  - `PAYMENT_PROVIDER_CONFIGURATION_TESTED`.
+- Validacao executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 23 migrations e manteve schema v23;
+  - catalogo dos 6 providers, com reais ainda `IMPLEMENTATION_PENDING`;
+  - concorrencia real de ativacao com dois perfis `SIMULATOR` temporarios, em sessoes distintas e CSRF renovado, sem `500` e mantendo no maximo um ativo;
+  - concorrencia idempotente de pagamento terminal aprovado com a mesma `Idempotency-Key`, gerando uma unica `payment_terminal_transaction`, um unico `payment` e snapshots preenchidos;
+  - simulador recusado com replay idempotente, checkout nao finalizado e nova tentativa com nova chave aprovada;
+  - configuracao dinamica `APPROVED -> DECLINED -> APPROVED` sem restart, com versoes crescentes e snapshots historicos preservados;
+  - ativacao de perfil ja ativo/desabilitado, provider e ambiente invalidos, e bloqueio de PAGBANK com respostas controladas;
+  - criptografia AES-256-GCM com chave temporaria Base64 de 32 bytes, ciphertext/nonce/versao persistidos, nonce novo por gravacao e sem texto puro;
+  - configuracao publica segura rejeitando `password`, `Password`, `clientSecret`, `client_secret`, `token`, `accessToken`, `apiKey`, `api_key`, `privateKey`, `certificate`, `credential`, `authorization` e `bearer`;
+  - consulta de transacao por snapshot, sem redirecionamento implicito para provider ativo;
+  - dinheiro com recebido/troco, sem transaction de terminal, recibo preservado e replay sem duplicidade;
+  - fallback manual para PIX, credito e debito, sem transaction de terminal e com provider ativo sem interferencia;
+  - recibo nao fiscal JSON e HTML 80 mm, reimpressao deterministica e sem credenciais;
+  - fiscal local para `NFCE_WITHOUT_CPF` e `NFCE_WITH_CPF`, exatamente um documento `PENDING_CONFIGURATION` por checkout e sem comunicacao externa;
+  - auditoria de criacao, atualizacao, ativacao, teste, configuracao dinamica e pagamentos aprovado/recusado, sem credenciais, ciphertext, nonce, token ou chave mestra;
+  - exportacao JSONL valida para o periodo temporario, com eventos de provider e sem segredos;
+  - permissoes de administrador e operador, incluindo GET administrativo sem CSRF mas com autoridade, e mutacoes com CSRF renovado;
+  - fluxos operacionais de venda direta cobertos por terminal, dinheiro, manual, recibo e fiscal;
+  - comanda validada com prato, terminal aprovado, fechamento e replay sem duplicidade;
+  - OS Lava Jato validada com servico, terminal aprovado, conclusao e replay sem duplicidade;
+  - rollback controlado para ativacao invalida, providers pendentes, credenciais/configuracao invalidas e concorrencias, sem estado parcial invalido;
+  - SQL confirmou provider/environments validos, unico ativo, ativo habilitado, JSON publico objeto, sem provider real ativo, snapshots preenchidos, historico preservado, idempotencia sem duplicidade e ausencia de segredos em auditoria/JSONL.
+- Correcao realizada durante a validacao final:
+  - `PaymentProviderConfigurationValidator` passou a rejeitar tambem `credential`, `authorization` e `bearer` em `public_configuration`.
+- Limpeza:
+  - perfil do simulador restaurado como habilitado, ativo e `{"simulatedOutcome":"APPROVED"}`;
+  - perfis reais temporarios removidos;
+  - credenciais temporarias removidas;
+  - massa operacional, payments, terminal transactions, documentos fiscais, movimentos/reservas, vendas, checkouts, usuarios temporarios, auditoria temporaria e JSONL temporario removidos;
+  - scripts e overrides temporarios removidos;
+  - marcador `codex12a-final-*` confirmado em zero.
+- Quantidade de checks finais: 109 checks API/SQL, alem de probes intermediarios de build, startup, criptografia, concorrencia e fluxo operacional.
+- Proxima etapa: **Passo 12B — adapters reais por provider, condicionados à documentação oficial, credenciais e ambientes de homologação**.
+- Dependencias reais do Passo 12B:
+  - documentacao oficial de PagBank;
+  - acesso comercial/contratual;
+  - credenciais de homologacao;
+  - terminais fisicos ou ambientes de homologacao de cada provider.
+
+- Passo 11B implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v21; schema atual: v22.
+- Migration criada: `V22__create_audit_retention_settings.sql`.
+- Tabela singleton criada: `audit_retention_settings`, com retenção desabilitada por padrão, `retention_days = 365`, `batch_size = 1000`, validações de faixa, status controlados e FK opcional para usuário atualizador.
+- Exportação JSONL implementada:
+  - `GET /api/v1/audit-logs/export`;
+  - exige `admin:logs`;
+  - exige `from` e `to`;
+  - reutiliza a semântica de filtros da listagem: módulo, ação, outcome, ator, recurso, request ID e busca;
+  - aplica período local inclusivo no timezone operacional;
+  - limita intervalo a 366 dias;
+  - aplica `app.audit.export.max-records`, padrão `100000`;
+  - retorna `application/x-ndjson; charset=UTF-8`, attachment, `Cache-Control: no-store` e `X-Content-Type-Options: nosniff`;
+  - usa cursor JDBC com `fetchSize`, ordenação `occurred_at ASC, id ASC`, escrita UTF-8 progressiva e sem arquivo temporário;
+  - audita somente conclusão bem-sucedida com `AUDIT_LOGS_EXPORTED`, sem conteúdo exportado em metadata.
+- Retenção controlada implementada:
+  - `GET /api/v1/audit-logs/retention`;
+  - `PUT /api/v1/audit-logs/retention`;
+  - `GET /api/v1/audit-logs/retention/preview`;
+  - `POST /api/v1/audit-logs/retention/run`;
+  - todos exigem `admin:logs`;
+  - PUT/POST permanecem protegidos por CSRF;
+  - atualização usa lock pessimista da linha singleton e não audita alterações idênticas;
+  - preview calcula cutoff por dias completos no timezone operacional;
+  - execução manual exige `confirm=true` e `expectedEligibleCount`, bloqueando divergências com `409`;
+  - exclusão ocorre em lotes curtos por `occurred_at < cutoff`;
+  - registros exatamente no cutoff permanecem;
+  - concorrência protegida por advisory lock PostgreSQL;
+  - execução automática diária configurada por `app.audit.retention.cron`, padrão `0 30 3 * * *`, no timezone operacional;
+  - scheduler não remove quando desabilitado e registra execução `SCHEDULED` quando habilitado.
+- Segurança e proteção de dados:
+  - operador validado com `403`;
+  - GETs validados sem CSRF;
+  - PUT/POST validados com CSRF obrigatório;
+  - não foram criados endpoints genéricos de exclusão;
+  - exportação usa campos já sanitizados e foi validada contra termos sensíveis;
+  - eventos de exportação/retenção não incluem conteúdo integral dos logs.
+- Correções realizadas durante a validação:
+  - `SecurityConfig` passou a permitir dispatchers `ASYNC` e `ERROR`, evitando negação no dispatch final de streaming já autorizado;
+  - cache header padrão de segurança foi desabilitado para preservar `Cache-Control: no-store` no JSONL.
+- Validação final executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 22 migrations e manteve schema v22;
+  - exportação básica JSONL com headers, UTF-8, attachment, arquivo vazio, contagem SQL, JSON válido, ordenação e ausência de segredos;
+  - filtros de exportação validados separadamente por período, módulo, ação, outcome, ator, tipo/ID de recurso, request ID e busca;
+  - limite de exportação validado com override temporário `APP_AUDIT_EXPORT_MAX_RECORDS=20`, retornando `AUDIT_EXPORT_LIMIT_EXCEEDED` antes do streaming;
+  - streaming validado por cursor JDBC/fetch size e comportamento sem lista completa;
+  - eventos `AUDIT_LOGS_EXPORTED`, `AUDIT_RETENTION_CONFIG_UPDATED` e `AUDIT_RETENTION_EXECUTED` validados com metadata limitada;
+  - configuração inicial, GET, PUT, faixas mínimas/máximas e idempotência de configuração validadas;
+  - preview validado com massa antiga isolada e contagem SQL idêntica;
+  - execução manual validada com exclusão somente dos antigos, preservação dos recentes, batches e atualização de última execução;
+  - proteções manuais validadas para `confirm=false`, retenção desabilitada, expected count divergente, CSRF ausente e operador `403`;
+  - concorrência validada com duas execuções simultâneas: uma `SUCCESS` removendo 300 registros e outra `409`, sem sobra marcada;
+  - scheduler validado com cron temporário a cada 5 segundos: desabilitado não removeu, habilitado removeu 12 elegíveis e registrou modo `SCHEDULED`;
+  - cutoff validado: registro um segundo antes foi removido e registro exatamente no cutoff permaneceu;
+  - 33 checks API/SQL executados nas rodadas finais, além de probes intermediários.
+- Limpeza:
+  - configuração restaurada para `enabled=false`, `retentionDays=365`, `batchSize=1000`;
+  - massa temporária `codex11b*` removida de logs, usuários e recursos auxiliares;
+  - overrides temporários removidos ao encerrar o servidor;
+  - contadores finais do marcador retornaram zero;
+  - servidor encerrado e porta 8080 confirmada livre.
+- Próxima etapa: **Passo 12A — preparação das integrações reais de pagamento por provider**.
+
+- Passo 11A implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v20; schema atual: v21.
+- Migration criada: `V21__create_audit_logs.sql`.
+- Tabela criada: `audit_logs`, append-only pela aplicação, sem `updated_at`, sem soft delete e sem endpoints de criação/edição/exclusão.
+- Endpoints administrativos criados:
+  - `GET /api/v1/audit-logs`;
+  - `GET /api/v1/audit-logs/{id}`.
+- Permissão:
+  - endpoints de auditoria exigem `admin:logs`;
+  - operador recebe `403`.
+- Correlação de requisições implementada:
+  - filtro aceita `X-Request-Id` somente quando é UUID válido;
+  - gera UUID quando ausente ou inválido;
+  - devolve `X-Request-Id` na resposta;
+  - usa contexto por thread e limpa ao final;
+  - `X-Request-Id` adicionado aos headers CORS permitidos/expostos.
+- Estratégia de auditoria:
+  - `AuditTrailService`, `AuditEvent`, `AuditContext`, `AuditLogReadRepository` e controlador em `br.com.vitrine7.audit`;
+  - eventos de sucesso usam `TransactionSynchronization.afterCommit`;
+  - falhas relevantes usam transação independente;
+  - metadata é construída por whitelist e sanitizada, sem serializar DTOs ou entidades inteiras.
+- Eventos cobertos no código:
+  - autenticação: login com sucesso, login inválido, logout;
+  - segurança: acesso negado;
+  - administração: criação/alteração/bloqueio/desbloqueio/reset de senha/soft delete de usuário, configurações gerais, módulos e maquininha;
+  - catálogo/estoque: categoria, prato, item de venda e movimento manual de estoque sem duplicar replay idempotente;
+  - operações/pagamentos: checkout cancelado, pagamento aprovado/recusado, venda direta finalizada, comanda criada/preparada/fechada/cancelada, OS criada/preparada/paga/concluída/cancelada;
+  - fiscal: documento fiscal local criado em `PENDING_CONFIGURATION`.
+- Proteção de dados sensíveis:
+  - não grava senha, hash, JWT, cookies, CSRF, headers completos, credenciais de maquininha, certificados, CSC, CVV, PIN, cartão completo, payload bruto de adquirente ou XML fiscal;
+  - mensagens e textos são limitados;
+  - busca dos endpoints não varre `metadata`.
+- Validação final executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 21 migrations e manteve schema v21;
+  - filtro `X-Request-Id` validado para ausente, válido, inválido e duas requisições sem header com IDs diferentes;
+  - login válido, login inválido, logout e acesso negado de operador validados;
+  - endpoints `GET /api/v1/audit-logs` e detalhe validados como administrador, incluindo GET sem CSRF;
+  - venda direta completa com pagamento aprovado, finalização, NFC-e local pendente e replays sem duplicidade;
+  - comanda completa com criação, linhas, preparação, pagamento, fechamento e replay sem duplicidade;
+  - comanda aberta cancelada com replay de cancelamento sem segundo evento;
+  - OS completa com criação, serviço, preparação, pagamento, transição para paga, conclusão e replays sem duplicidade;
+  - OS aberta cancelada com replay de cancelamento sem segundo evento;
+  - pagamento recusado em terminal simulado seguido de aprovado, com metadata segura;
+  - documento fiscal local `NFCE_WITHOUT_CPF` e `NFCE_WITH_CPF` em `PENDING_CONFIGURATION`, sem XML, sem chave fictícia e sem duplicidade por replay;
+  - rollback provocado em preparação com estoque insuficiente e OS sem serviço, sem auditoria `SUCCESS` da transição revertida;
+  - replay obrigatório de movimento de estoque, pagamento aprovado, venda direta finalizada, fechamento/cancelamento de comanda, pagamento/conclusão/cancelamento de OS e documento fiscal local;
+  - filtros e paginação de auditoria validados por página, módulo, ação, outcome, ator, resource type/id, request id, período, busca e combinação de filtros;
+  - erros de filtro validados para página/tamanho inválidos, `from > to`, data malformada, intervalo maior que 366 dias e UUID inválido;
+  - segurança validada para `admin:logs`, operador `403`, GET sem CSRF, ausência de mutações de audit logs, Request ID preservado/substituído e contexto sem vazamento;
+  - SQL confirmou schema v21, campos obrigatórios, outcomes, metadata objeto, request IDs válidos, snapshots para eventos autenticados, ordenação cronológica, ausência de termos sensíveis e ausência de duplicidade por replay;
+  - 67 checks API/SQL executados na rodada final.
+- Correção realizada durante a validação:
+  - `GlobalExceptionHandler` passou a tratar `HttpRequestMethodNotSupportedException` como `405 METHOD_NOT_ALLOWED`, evitando `500` ao chamar métodos inexistentes em `/api/v1/audit-logs`.
+- Limpeza:
+  - massa temporária `codex11a-final-*` removida;
+  - usuários, categorias, pratos, itens, serviços, checkouts, pagamentos, documentos fiscais, comandas, OS, movimentos, transações de terminal e logs temporários removidos;
+  - configuração de terminal simulado restaurada;
+  - contadores finais da massa temporária retornaram zero.
+- Próxima etapa após 11A: **Passo 11B — exportação JSONL e retenção controlada**, concluída nesta atualização.
+
+- Passo 10B implementado e validado em 2026-07-16.
+- Schema Flyway inicial: v19; schema final: v20.
+- Migration criada: `V20__create_fiscal_document_foundation.sql`.
+- Tabelas fiscais criadas:
+  - `fiscal_documents`;
+  - `fiscal_document_messages`.
+- Fundacao fiscal implementada em `br.com.vitrine7.fiscal`, sem emissao fiscal real, sem SEFAZ, sem XML fiscal automatico, sem chave de acesso ficticia, sem DANFE e sem provider definitivo.
+- Criacao automatica local integrada como side effect transacional apos checkout finalizado:
+  - `GENERAL_RECEIPT` nao cria documento fiscal;
+  - `NFCE_WITHOUT_CPF` cria documento local `PENDING_CONFIGURATION` sem CPF;
+  - `NFCE_WITH_CPF` cria documento local `PENDING_CONFIGURATION` com snapshot de CPF;
+  - replays de pagamento/finalizacao nao duplicam documento.
+- Integridade financeira antes da criacao fiscal:
+  - pagamento precisa estar `APPROVED`;
+  - `payment.amount_cents` precisa ser igual a `checkout.total_cents`;
+  - documento copia subtotal, desconto, total, checkout, payment, operacao, source e CPF do snapshot do checkout.
+- Endpoints fiscais administrativos:
+  - `GET /api/v1/fiscal/documents`;
+  - `GET /api/v1/fiscal/documents/{id}`;
+  - `GET /api/v1/fiscal/documents/{id}/messages`;
+  - `GET /api/v1/fiscal/status`.
+- Permissao:
+  - todos os endpoints fiscais exigem `admin:fiscal-config`;
+  - operador recebe `403`.
+- Mensagens fiscais modeladas com direcao `SENT` e `RECEIVED`, XML em `TEXT` no banco e retorno como texto em JSON; nenhum endpoint publico fabrica XML fiscal.
+- Status da integracao retorna explicitamente:
+  - `configured = false`;
+  - `providerConfigured = false`;
+  - `environment = NOT_CONFIGURED`;
+  - `automaticIssuanceAvailable = false`;
+  - `receiptAvailable = true`.
+- Adapter futuro criado:
+  - `FiscalProviderAdapter`;
+  - `UnconfiguredFiscalProviderAdapter`, retornando `FISCAL_PROVIDER_NOT_CONFIGURED`.
+- Correcoes realizadas durante a validacao:
+  - busca fiscal administrativa passou a filtrar em subconsulta para evitar uso de alias no mesmo `WHERE`;
+  - finalizacao de venda direta ficou idempotente para recuperar checkout `PAID` com reserva ja `CONSUMED`, sem novo movimento de estoque.
+- Validacao executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 20 migrations e manteve schema v20 apos aplicar v20;
+  - venda direta, comanda e OS finalizadas com `GENERAL_RECEIPT`, `NFCE_WITHOUT_CPF` e `NFCE_WITH_CPF`;
+  - recibo geral nao criou documento fiscal;
+  - NFC-e com e sem CPF criaram documento pendente local;
+  - replays de pagamento preservaram o mesmo payment e nao duplicaram documentos;
+  - endpoints fiscais de listagem, detalhe, mensagens e status validados como administrador;
+  - operador sem `admin:fiscal-config` recebeu `403`;
+  - mensagens temporarias `SENT` e `RECEIVED` lidas via endpoint com XML preservado como texto;
+  - constraints rejeitaram XML vazio;
+  - recibo nao fiscal JSON/HTML continuou funcionando;
+  - 72 checks automatizados/API/SQL executados nas rodadas finais, alem de probes e validacoes intermediarias;
+  - recusa por terminal simulado nao finalizou checkout nem criou documento fiscal;
+  - nova tentativa aprovada apos recusa criou exatamente um documento fiscal;
+  - recuperacao de checkout `PAID` sem documento fiscal criou exatamente um documento no replay de finalizacao.
+- Limpeza:
+  - massa temporaria com marcador `codex10b*` removida;
+  - mensagens, documentos fiscais, pagamentos, reservas, movimentos, checkouts, vendas, comandas, OS, catalogos e usuario temporario removidos/inativados;
+  - contador final do marcador retornou zero.
+- Ressalva real da validacao:
+  - a primeira fixture de mensagens inseriu `SENT` e `RECEIVED` no mesmo instante; como a ordenacao contratual e cronologica por `created_at`, a fixture precisa usar timestamps distintos para afirmar ordem absoluta entre duas mensagens simultaneas. O endpoint preservou direcao, XML, codigo e motivo.
+
+- Passo 10A implementado e validado em 2026-07-16.
+- Passo 10A validado conforme o modelo atual de permissoes.
+- Schema Flyway do Passo 10A mantido em v19; nenhuma migration criada para o recibo nao fiscal.
+- Recibo nao fiscal implementado como read model em `br.com.vitrine7.receipt`, sem tabela de recibos, PDF persistido, numeracao fiscal, NFC-e, SEFAZ, QR Code, evento assíncrono ou servico externo.
+- Endpoints operacionais:
+  - `GET /api/v1/checkouts/{checkoutId}/receipt`
+  - `GET /api/v1/checkouts/{checkoutId}/receipt/print`
+- Operacoes suportadas:
+  - venda direta;
+  - comanda;
+  - ordem de servico do Lava Jato.
+- Fonte exclusiva de pagamento: exatamente um `payments.status = 'APPROVED'`, com validacao de igualdade entre total do checkout, pagamento aprovado e operacao historica.
+- Dados do recibo usam snapshots historicos das linhas de venda/comanda e da OS; alteracoes posteriores em catalogos, cliente e veiculo nao alteram recibos ja emitidos.
+- HTML de impressao para bobina de 80 mm:
+  - `text/html; charset=UTF-8`;
+  - `Content-Disposition: inline`;
+  - `Cache-Control: no-store`;
+  - `X-Content-Type-Options: nosniff`;
+  - CSS com `@page` e `80mm`;
+  - sem JavaScript e sem recursos externos.
+- Segurança:
+  - conteudo dinamico escapado com `HtmlUtils.htmlEscape`;
+  - autorizacao dinamica por tipo de checkout: Bar exige `bar:access`; Lava exige `lava:access`;
+  - GET sem CSRF, mantendo CSRF para mutacoes existentes.
+- Validacao executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 19 migrations e manteve schema v19;
+  - venda direta finalizada com duas linhas, desconto, dinheiro, valor recebido e troco;
+  - comanda fechada com prato, item de venda direta e terminal simulado aprovado;
+  - OS Lava paga com cliente, telefone, veiculo, placa, porte e dois servicos;
+  - reimpressao HTML deterministica;
+  - HTML injection escapado;
+  - estados invalidos rejeitados com erro de negocio;
+  - divergencia financeira rejeitada;
+  - vinculo inconsistente rejeitado;
+  - 48 checks funcionais/HTML/SQL executados.
+- Limitacao real encontrada:
+  - o modelo atual de usuarios possui apenas `ADMINISTRADOR` e `OPERADOR`; `OPERADOR` recebe simultaneamente `bar:access` e `lava:access`. Assim, a validacao de usuarios "apenas Bar" e "apenas Lava" nao existe no modelo de papeis atual sem evolucao estrutural de permissoes.
+
+- Passo 9B implementado e validado em 2026-07-16.
+- Schema Flyway atual: v19.
+- Financeiro consolidado implementado como read model em `br.com.vitrine7.finance`, sem tabela financeira duplicada.
+- Fonte financeira exclusiva: `payments.status = 'APPROVED'`, usando `payments.amount_cents` e `payments.approved_at`.
+- Endpoints financeiros administrativos:
+  - `GET /api/v1/finance/summary`
+  - `GET /api/v1/finance/daily`
+  - `GET /api/v1/finance/transactions`
+- Permissao:
+  - todos os endpoints financeiros exigem `reports:access`;
+  - operador permanece sem acesso e recebe `403`.
+- Filtros implementados:
+  - `from` e `to` como datas locais ISO inclusivas;
+  - `module`;
+  - `operationType`;
+  - `paymentMethod`;
+  - `search` em transacoes;
+  - `page` e `size` com limite 1..100 em transacoes.
+- Timezone operacional:
+  - configuracao `app.business-time-zone`, padrao `America/Bahia`;
+  - agrupamento diario usa `approved_at` convertido para o fuso operacional;
+  - intervalo interno usa inicio de `from` e inicio do dia seguinte a `to`, exclusivo.
+- Estrategia de consulta:
+  - SQL/JDBC parametrizado com CTE iniciando em `payments`;
+  - joins com `checkout_sessions`, Bar e Lava apenas para classificacao, busca, vinculo e descricao;
+  - paginacao e ordenacao das transacoes no banco;
+  - sem N+1 e sem carregamento integral de pagamentos em memoria.
+- Indices/migration:
+  - migration v19 criada: `V19__add_financial_read_indexes.sql`;
+  - adicionados `idx_payments_status_approved_at`, `idx_payments_method_approved_at` e `idx_checkout_sessions_operation_type_id`;
+  - EXPLAIN em massa pequena escolheu sequential scan naturalmente; com `enable_seqscan=off`, o plano usa `idx_payments_status_approved_at` e PK de checkout.
+- Validacao do Passo 9B executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 19 migrations e manteve schema v19 apos aplicar v19;
+  - massa temporaria `codex9b202607160532` com 7 pagamentos aprovados, recusados, processing e terminal transactions;
+  - resumo geral: 28.000 centavos, 7 pagamentos, ticket medio 4.000;
+  - modulos: Bar 10.000/4, Lava 18.000/3;
+  - operacoes: `BAR_DIRECT_SALE` 3.000/2, `BAR_COMMAND` 7.000/2, `LAVA_WORK_ORDER` 18.000/3;
+  - metodos: `CASH` 6.000/2, `PIX` 8.000/2, `CREDIT` 10.000/2, `DEBIT` 4.000/1;
+  - serie diaria em `America/Bahia`: 2026-06-30 1.000/1, 2026-07-01 9.000/2, 2026-07-02 7.000/2, 2026-07-03 11.000/2;
+  - caso proximo da meia-noite UTC agrupado corretamente em 2026-06-30 local;
+  - transacoes paginadas: 7 elementos, 3 paginas, sem duplicidade;
+  - buscas por payment ID, checkout ID, comanda, cliente e placa;
+  - recusados e processing ignorados;
+  - replay/idempotencia sem duplicar receita;
+  - periodo sem movimento zerado;
+  - 15 checks SQL obrigatorios retornaram valores esperados;
+  - filtros invalidos retornaram erro padrao `400`;
+  - operador sem `reports:access` recebeu `403`;
+  - GET validado sem CSRF.
+
+- Passo 9A implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v18.
+- Historicos operacionais implementados como read models sobre tabelas existentes, sem duplicar vendas, comandas ou OS.
+- Endpoints recentes:
+  - `GET /api/v1/bar/history/recent`
+  - `GET /api/v1/lava/history/recent`
+- Endpoints completos:
+  - `GET /api/v1/bar/history`
+  - `GET /api/v1/lava/history`
+- Permissoes:
+  - recentes exigem `bar:access` ou `lava:access`;
+  - completos exigem `reports:access`;
+  - operador permanece sem `reports:access`.
+- Estrategia de consulta:
+  - Bar usa SQL `UNION ALL` via JDBC para unificar `bar_direct_sales` e `bar_tabs`, com filtros e paginacao no banco;
+  - Lava usa consulta JDBC sobre `lava_work_orders` e linhas historicas de servico;
+  - pagamento final vem somente de `payments.status = 'APPROVED'` vinculado ao checkout da operacao;
+  - buscas usam snapshots historicos de linhas, OS e nomes de comanda.
+- Indices/migration:
+  - schema mantido em v18;
+  - nenhuma migration v19 criada porque os indices existentes cobrem os principais pontos de data/status/fk usados no read model (`checkout_sessions`, `payments`, `bar_tabs`, `lava_work_orders` e linhas por operacao).
+- Validacao do Passo 9A executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 18 migrations e manteve schema v18;
+  - recentes do Bar e Lava acessiveis por operador;
+  - completos do Bar e Lava acessiveis por administrador e negados ao operador com `403`;
+  - filtros por busca, status, tipo, metodo de pagamento e intervalo de datas;
+  - paginacao unificada do Bar validada sem duplicidade entre paginas;
+  - snapshots preservados apos alteracao de catalogos/clientes temporarios;
+  - tentativas recusadas ignoradas como pagamento final aprovado;
+  - validacoes de parametros invalidos retornando erro padrao;
+  - 49 checks funcionais e SQL;
+  - limpeza da massa temporaria `codex9a202607160505` confirmada com contador zero.
+
+## Historico
+
+- Passo 8B implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v18.
+- Handler de finalizacao para `LAVA_WORK_ORDER` integrado ao checkout central.
+- Pagamento aprovado agora preserva o modulo central de pagamentos, finaliza o checkout e altera a OS de `PAYMENT_PENDING` para `PAID` com auditoria `paid_at`/`paid_by_user_id`.
+- Conclusao operacional separada implementada em `POST /api/v1/lava/work-orders/{id}/complete`, fazendo `PAID` para `COMPLETED` com auditoria `completed_at`/`completed_by_user_id` e replay idempotente por estado.
+- Migration v18 adicionou auditoria de pagamento/conclusao da OS, FKs para `users` e constraints de consistencia por estado.
+- Validacao do Passo 8B executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 18 migrations e aplicou v18;
+  - cash, terminal simulado aprovado, terminal recusado com nova tentativa aprovada e fallback manual;
+  - replay de pagamento aprovado e replay de conclusao;
+  - recuperacao idempotente com payment `APPROVED`, checkout `PAID` e OS ainda `PAYMENT_PENDING`;
+  - bloqueios para conclusao/cancelamento/edicao em estados invalidos;
+  - filtros/listagem por `PAID`, `COMPLETED`, `PAYMENT_PENDING`, busca por snapshots e paginacao;
+  - operador validado com `lava:access` sem permissoes administrativas adicionais;
+  - 59 checks funcionais e SQL com CSRF renovado antes de cada mutacao;
+  - limpeza da massa temporaria confirmada com contador zero.
+
+- Passo 8A implementado e validado em 2026-07-16.
+- Schema Flyway anterior: v17.
+- Principais tabelas novas: `lava_work_orders`, `lava_work_order_lines`.
+- Checkout usa `LAVA_WORK_ORDER` com `source_id` apontando para a OS.
+- Endpoints principais:
+  - `POST /api/v1/lava/work-orders`
+  - `GET /api/v1/lava/work-orders`
+  - `GET /api/v1/lava/work-orders/{id}`
+  - `PUT /api/v1/lava/work-orders/{id}/customer`
+  - `PUT /api/v1/lava/work-orders/{id}/vehicle-size`
+  - `PUT /api/v1/lava/work-orders/{id}/services/{serviceId}`
+  - `DELETE /api/v1/lava/work-orders/{id}/services/{serviceId}`
+  - `POST /api/v1/lava/work-orders/{id}/prepare`
+  - `POST /api/v1/lava/work-orders/{id}/cancel`
+- Estados implementados no dominio da OS: `OPEN`, `PAYMENT_PENDING`, `PAID`, `COMPLETED`, `CANCELLED`.
+- Transicoes validadas no Passo 8A: criacao para `OPEN`, preparacao para `PAYMENT_PENDING`, cancelamento/expiracao do checkout reabrindo para `OPEN`, cancelamento direto de OS aberta para `CANCELLED`.
+- Idempotencia:
+  - criacao exige `Idempotency-Key` e valida usuario/fingerprint;
+  - preparacao exige `Idempotency-Key`, retorna mesma OS/checkout em replay e conflita com body diferente.
+- Validacao executada:
+  - `mvn clean package`;
+  - `mvn spring-boot:run`;
+  - Flyway validou 17 migrations e aplicou v17;
+  - 51 checks funcionais e SQL via API com CSRF renovado antes de cada mutacao;
+  - limpeza da massa temporaria confirmada com contador zero.
+
+## Proxima Etapa
+
+- Proxima etapa planejada: **Passo 12C — agente nativo e primeiro adapter real do provider efetivamente escolhido pelo estabelecimento**.
+
+## Pendencias Conhecidas
+
+- Nenhuma pendencia real conhecida no escopo do Passo 8A.
+- Nenhuma pendencia real conhecida no escopo do Passo 8B.
+- Nenhuma pendencia real conhecida no escopo do Passo 9A.
+- Nenhuma pendencia real conhecida no escopo do Passo 9B.
+- Nenhuma pendencia real conhecida no escopo do Passo 11B.
+- Nenhuma pendencia real conhecida no escopo do Passo 12B; providers reais seguem bloqueados por escolha comercial, hardware, credenciais e homologacao, conforme a matriz oficial.
+- Pendente para validacao futura de segregacao operacional fina: criar modelo estrutural para usuarios com permissoes apenas Bar ou apenas Lava, se o produto exigir essa combinacao.
+- Pendente para etapa fiscal futura: definir provider, certificados, CSC, CNPJ/IE reais, ambiente, transmissao, consulta, cancelamento e DANFE conforme requisitos legais.

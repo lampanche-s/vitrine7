@@ -1,0 +1,3 @@
+export {
+  BarMenuManager,
+} from "./BarMenuManager";

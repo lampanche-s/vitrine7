@@ -1,0 +1,174 @@
+{
+  "name": "Codex UI PAY 059181",
+  "events": [
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs?page=0&size=100&status=OPEN",
+      "postData": null
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/history?page=0&size=20",
+      "postData": null
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs?page=0&size=100&status=OPEN",
+      "postData": null
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/history?page=0&size=20",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/history?page=0&size=20",
+      "status": 200,
+      "body": "{\"items\":[{\"type\":\"TAB\",\"operationId\":61,\"checkoutId\":\"ad7fe9e5-151a-4f05-9163-89ddc3fba893\",\"displayName\":\"Codex UI 637081 PIX\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"3ac79a1f-f48a-4a6c-b9c8-74078ddbedbc\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:27:32.206559Z\",\"finishedAt\":\"2026-07-24T23:33:16.002061Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/61\"},{\"type\":\"DIRECT_SALE\",\"operationId\":187,\"checkoutId\":\"d7f83cd9-73e0-4b1c-8678-ae05b803c8bf\",\"displayName\":\"Venda direta\",\"operationalStatus\":\"FINALIZED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"057242de-906a-4adf-9852-738c3c4568ca\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:17.16996Z\",\"finishedAt\":\"2026-07-24T23:08:17.336698Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/direct-sales/187\"},{\"type\":\"TAB\",\"operationId\":58,\"checkoutId\":\"af507c05-cbcd-4779-a38a-192d9ae6b3b9\",\"displayName\":\"Pix API Mesa 9c4572\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"2275ebb9-e372-4075-9b70-eab6e9235dae\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:16.87067Z\",\"finishedAt\":\"2026-07-24T23:08:17.037107Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/58\"},{\"type\":\"TAB\",\"operationId\":56,\"checkoutId\":\"09273c02-9dd1-4eaf-9643-2bcc93c33dd0\",\"displayName\":\"76767\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1500,\"discountCents\":0,\"totalCents\":1500,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"CASH\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"26c79304-fe03-4804-906a-c5e1f40812bb\",\"cashReceivedCents\":5000,\"cashChangeCents\":3500,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-23T06:32:29.735606Z\",\"finishedAt\":\"2026-07-23T06:32:43.541003Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/56\"},{\"type\":\"DIRECT_SALE\",\"operationId\":184,\"checkoutId\":\"6be8b0b2-e22c-4ccf-be18-64389aa3c9bf\",\"displayName\":\"Venda direta\",\"operationalStatus\":\"FINALIZED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"CREDIT\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"00d40da6-ef62-4673-9d97-d30fca4c211e\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-23T06:06:27.870877Z\",\"finishedAt\":\"2026-07-23T06:06:28.146082Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/direct-sales/184\"},{\"type\":\"TAB\",\"operationId\":55,\"checkoutId\":\"d3e9"
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs?page=0&size=100&status=PAYMENT_PENDING",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs?page=0&size=100&status=OPEN",
+      "status": 200,
+      "body": "{\"items\":[{\"id\":59,\"name\":\"Codex UI 577765\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":0,\"discountCents\":0,\"totalCents\":0,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[],\"reservations\":[],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:26:18.11029Z\",\"updatedAt\":\"2026-07-24T23:26:18.11029Z\"},{\"id\":57,\"name\":\"joão\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[{\"id\":67,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[{\"id\":\"75349102-1634-4b0e-afcf-f6fe14561abc\",\"saleItemId\":67,\"quantity\":1,\"status\":\"EXPIRED\",\"expiresAt\":\"2026-07-24T23:21:53.038959Z\"}],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T22:51:41.911466Z\",\"updatedAt\":\"2026-07-24T23:23:24.241606Z\"}],\"page\":0,\"size\":100,\"totalElements\":2,\"totalPages\":1,\"first\":true,\"last\":true}"
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs?page=0&size=100&status=PAYMENT_PENDING",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs?page=0&size=100&status=OPEN",
+      "status": 200,
+      "body": "{\"items\":[{\"id\":59,\"name\":\"Codex UI 577765\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":0,\"discountCents\":0,\"totalCents\":0,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[],\"reservations\":[],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:26:18.11029Z\",\"updatedAt\":\"2026-07-24T23:26:18.11029Z\"},{\"id\":57,\"name\":\"joão\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[{\"id\":67,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[{\"id\":\"75349102-1634-4b0e-afcf-f6fe14561abc\",\"saleItemId\":67,\"quantity\":1,\"status\":\"EXPIRED\",\"expiresAt\":\"2026-07-24T23:21:53.038959Z\"}],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T22:51:41.911466Z\",\"updatedAt\":\"2026-07-24T23:23:24.241606Z\"}],\"page\":0,\"size\":100,\"totalElements\":2,\"totalPages\":1,\"first\":true,\"last\":true}"
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs?page=0&size=100&status=PAYMENT_PENDING",
+      "status": 200,
+      "body": "{\"items\":[],\"page\":0,\"size\":100,\"totalElements\":0,\"totalPages\":0,\"first\":true,\"last\":true}"
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/history?page=0&size=20",
+      "status": 200,
+      "body": "{\"items\":[{\"type\":\"TAB\",\"operationId\":61,\"checkoutId\":\"ad7fe9e5-151a-4f05-9163-89ddc3fba893\",\"displayName\":\"Codex UI 637081 PIX\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"3ac79a1f-f48a-4a6c-b9c8-74078ddbedbc\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:27:32.206559Z\",\"finishedAt\":\"2026-07-24T23:33:16.002061Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/61\"},{\"type\":\"DIRECT_SALE\",\"operationId\":187,\"checkoutId\":\"d7f83cd9-73e0-4b1c-8678-ae05b803c8bf\",\"displayName\":\"Venda direta\",\"operationalStatus\":\"FINALIZED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"057242de-906a-4adf-9852-738c3c4568ca\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:17.16996Z\",\"finishedAt\":\"2026-07-24T23:08:17.336698Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/direct-sales/187\"},{\"type\":\"TAB\",\"operationId\":58,\"checkoutId\":\"af507c05-cbcd-4779-a38a-192d9ae6b3b9\",\"displayName\":\"Pix API Mesa 9c4572\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"2275ebb9-e372-4075-9b70-eab6e9235dae\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:16.87067Z\",\"finishedAt\":\"2026-07-24T23:08:17.037107Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/58\"},{\"type\":\"TAB\",\"operationId\":56,\"checkoutId\":\"09273c02-9dd1-4eaf-9643-2bcc93c33dd0\",\"displayName\":\"76767\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1500,\"discountCents\":0,\"totalCents\":1500,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"CASH\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"26c79304-fe03-4804-906a-c5e1f40812bb\",\"cashReceivedCents\":5000,\"cashChangeCents\":3500,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-23T06:32:29.735606Z\",\"finishedAt\":\"2026-07-23T06:32:43.541003Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/56\"},{\"type\":\"DIRECT_SALE\",\"operationId\":184,\"checkoutId\":\"6be8b0b2-e22c-4ccf-be18-64389aa3c9bf\",\"displayName\":\"Venda direta\",\"operationalStatus\":\"FINALIZED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"CREDIT\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"00d40da6-ef62-4673-9d97-d30fca4c211e\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-23T06:06:27.870877Z\",\"finishedAt\":\"2026-07-23T06:06:28.146082Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/direct-sales/184\"},{\"type\":\"TAB\",\"operationId\":55,\"checkoutId\":\"d3e9"
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs?page=0&size=100&status=PAYMENT_PENDING",
+      "status": 200,
+      "body": "{\"items\":[],\"page\":0,\"size\":100,\"totalElements\":0,\"totalPages\":0,\"first\":true,\"last\":true}"
+    },
+    {
+      "kind": "request",
+      "method": "POST",
+      "url": "http://localhost:8080/api/v1/bar/tabs",
+      "postData": "{\"name\":\"Codex UI PAY 059181\"}"
+    },
+    {
+      "kind": "response",
+      "method": "POST",
+      "url": "http://localhost:18081/api/v1/bar/tabs",
+      "status": 201,
+      "body": "{\"id\":62,\"name\":\"Codex UI PAY 059181\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":0,\"discountCents\":0,\"totalCents\":0,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[],\"reservations\":[],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T20:34:19.855455-03:00\",\"updatedAt\":\"2026-07-24T20:34:19.855455-03:00\"}"
+    },
+    {
+      "kind": "request",
+      "method": "PUT",
+      "url": "http://localhost:8080/api/v1/bar/tabs/62/sale-items/67",
+      "postData": "{\"quantity\":1}"
+    },
+    {
+      "kind": "response",
+      "method": "PUT",
+      "url": "http://localhost:18081/api/v1/bar/tabs/62/sale-items/67",
+      "status": 200,
+      "body": "{\"id\":62,\"name\":\"Codex UI PAY 059181\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[{\"id\":72,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:34:19.855455Z\",\"updatedAt\":\"2026-07-24T23:34:19.855455Z\"}"
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs/62",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs/62",
+      "status": 200,
+      "body": "{\"id\":62,\"name\":\"Codex UI PAY 059181\",\"status\":\"OPEN\",\"checkoutId\":null,\"checkoutStatus\":null,\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":null,\"cpfDigits\":null,\"prepared\":false,\"preparedAt\":null,\"lines\":[{\"id\":72,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:34:19.855455Z\",\"updatedAt\":\"2026-07-24T23:34:21.463836Z\"}"
+    },
+    {
+      "kind": "request",
+      "method": "POST",
+      "url": "http://localhost:8080/api/v1/bar/tabs/62/prepare",
+      "postData": "{\"documentType\":\"GENERAL_RECEIPT\",\"cpf\":null,\"discountCents\":0}"
+    },
+    {
+      "kind": "response",
+      "method": "POST",
+      "url": "http://localhost:18081/api/v1/bar/tabs/62/prepare",
+      "status": 201,
+      "body": "{\"id\":62,\"name\":\"Codex UI PAY 059181\",\"status\":\"PAYMENT_PENDING\",\"checkoutId\":\"1725afc4-654f-4927-829a-24613a4bc6fc\",\"checkoutStatus\":\"READY_FOR_PAYMENT\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"cpfDigits\":null,\"prepared\":true,\"preparedAt\":\"2026-07-24T23:34:22.7388912Z\",\"lines\":[{\"id\":72,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[{\"id\":\"93aceb98-ed3c-4cfa-b44b-9606c3c441a4\",\"saleItemId\":67,\"quantity\":1,\"status\":\"ACTIVE\",\"expiresAt\":\"2026-07-25T00:04:22.7388912Z\"}],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:34:19.855455Z\",\"updatedAt\":\"2026-07-24T20:34:22.751869-03:00\"}"
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/tabs/62",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/tabs/62",
+      "status": 200,
+      "body": "{\"id\":62,\"name\":\"Codex UI PAY 059181\",\"status\":\"PAYMENT_PENDING\",\"checkoutId\":\"1725afc4-654f-4927-829a-24613a4bc6fc\",\"checkoutStatus\":\"READY_FOR_PAYMENT\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"cpfDigits\":null,\"prepared\":true,\"preparedAt\":\"2026-07-24T23:34:22.738891Z\",\"lines\":[{\"id\":72,\"type\":\"SALE_ITEM\",\"dishId\":null,\"saleItemId\":67,\"itemName\":\"codex1720260717194857-item\",\"categoryName\":\"codex1720260717194857-cat\",\"unitPriceCents\":1234,\"quantity\":1,\"lineTotalCents\":1234}],\"reservations\":[{\"id\":\"93aceb98-ed3c-4cfa-b44b-9606c3c441a4\",\"saleItemId\":67,\"quantity\":1,\"status\":\"ACTIVE\",\"expiresAt\":\"2026-07-25T00:04:22.738891Z\"}],\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:34:19.855455Z\",\"updatedAt\":\"2026-07-24T23:34:22.751869Z\"}"
+    },
+    {
+      "kind": "request",
+      "method": "POST",
+      "url": "http://localhost:8080/api/v1/checkouts/1725afc4-654f-4927-829a-24613a4bc6fc/payments/pix",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "POST",
+      "url": "http://localhost:18081/api/v1/checkouts/1725afc4-654f-4927-829a-24613a4bc6fc/payments/pix",
+      "status": 201,
+      "body": "{\"payment\":{\"id\":\"71796f61-d65e-41a5-ab95-357c46188f3c\",\"checkoutSessionId\":\"1725afc4-654f-4927-829a-24613a4bc6fc\",\"idempotencyKey\":\"f37d8457-daba-4182-997c-34ed7192f666\",\"method\":\"PIX\",\"processingMode\":\"MANUAL_FALLBACK\",\"status\":\"APPROVED\",\"amountCents\":1234,\"cashReceivedCents\":null,\"cashChangeCents\":null,\"cashConfirmedByUserId\":null,\"manualReason\":\"Pix confirmado.\",\"approvedAt\":\"2026-07-24T23:34:25.7523979Z\",\"approvedByUserId\":1,\"declinedAt\":null,\"cancelledAt\":null,\"cancelledByUserId\":null,\"cancelReason\":null,\"reversedAt\":null,\"reversedByUserId\":null,\"reversalReason\":null,\"createdByUserId\":1,\"createdAt\":\"2026-07-24T20:34:25.75953-03:00\",\"updatedAt\":\"2026-07-24T20:34:25.75953-03:00\"},\"checkout\":{\"id\":\"1725afc4-654f-4927-829a-24613a4bc6fc\",\"idempotencyKey\":\"81104eff-3a43-4ba2-99e8-d3d57afd3492\",\"businessArea\":\"BAR\",\"operationType\":\"BAR_COMMAND\",\"sourceId\":62,\"status\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"cpfDigits\":null,\"expiresAt\":\"2026-07-25T00:04:22.738891Z\",\"paidAt\":\"2026-07-24T23:34:25.752398Z\",\"finalizedAt\":\"2026-07-24T23:34:25.77398Z\",\"cancelledAt\":null,\"cancelledByUserId\":null,\"cancelReason\":null,\"createdByUserId\":1,\"createdAt\":\"2026-07-24T23:34:22.738891Z\",\"updatedAt\":\"2026-07-24T23:34:25.801498Z\"}}"
+    },
+    {
+      "kind": "request",
+      "method": "GET",
+      "url": "http://localhost:8080/api/v1/bar/history?page=0&size=20",
+      "postData": null
+    },
+    {
+      "kind": "response",
+      "method": "GET",
+      "url": "http://localhost:18081/api/v1/bar/history?page=0&size=20",
+      "status": 200,
+      "body": "{\"items\":[{\"type\":\"TAB\",\"operationId\":62,\"checkoutId\":\"1725afc4-654f-4927-829a-24613a4bc6fc\",\"displayName\":\"Codex UI PAY 059181\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"71796f61-d65e-41a5-ab95-357c46188f3c\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:34:19.855455Z\",\"finishedAt\":\"2026-07-24T23:34:25.77398Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/62\"},{\"type\":\"TAB\",\"operationId\":61,\"checkoutId\":\"ad7fe9e5-151a-4f05-9163-89ddc3fba893\",\"displayName\":\"Codex UI 637081 PIX\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"3ac79a1f-f48a-4a6c-b9c8-74078ddbedbc\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:27:32.206559Z\",\"finishedAt\":\"2026-07-24T23:33:16.002061Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/61\"},{\"type\":\"DIRECT_SALE\",\"operationId\":187,\"checkoutId\":\"d7f83cd9-73e0-4b1c-8678-ae05b803c8bf\",\"displayName\":\"Venda direta\",\"operationalStatus\":\"FINALIZED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"057242de-906a-4adf-9852-738c3c4568ca\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:17.16996Z\",\"finishedAt\":\"2026-07-24T23:08:17.336698Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/direct-sales/187\"},{\"type\":\"TAB\",\"operationId\":58,\"checkoutId\":\"af507c05-cbcd-4779-a38a-192d9ae6b3b9\",\"displayName\":\"Pix API Mesa 9c4572\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1234,\"discountCents\":0,\"totalCents\":1234,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"PIX\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"2275ebb9-e372-4075-9b70-eab6e9235dae\",\"cashReceivedCents\":null,\"cashChangeCents\":null,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-24T23:08:16.87067Z\",\"finishedAt\":\"2026-07-24T23:08:17.037107Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/58\"},{\"type\":\"TAB\",\"operationId\":56,\"checkoutId\":\"09273c02-9dd1-4eaf-9643-2bcc93c33dd0\",\"displayName\":\"76767\",\"operationalStatus\":\"CLOSED\",\"checkoutStatus\":\"FINALIZED\",\"subtotalCents\":1500,\"discountCents\":0,\"totalCents\":1500,\"documentType\":\"GENERAL_RECEIPT\",\"paymentMethod\":\"CASH\",\"paymentStatus\":\"APPROVED\",\"paymentId\":\"26c79304-fe03-4804-906a-c5e1f40812bb\",\"cashReceivedCents\":5000,\"cashChangeCents\":3500,\"lineCount\":1,\"totalUnits\":1,\"createdAt\":\"2026-07-23T06:32:29.735606Z\",\"finishedAt\":\"2026-07-23T06:32:43.541003Z\",\"createdByUserId\":1,\"detailPath\":\"/api/v1/bar/tabs/56\"},{\"type\":\"DIRECT_SALE\",\"operationId\":184,\"checkoutId\":\"6be8b0b2-e22c"
+    }
+  ]
+}

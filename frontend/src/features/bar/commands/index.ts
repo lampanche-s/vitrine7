@@ -1,0 +1,3 @@
+export {
+  BarCommandsManager,
+} from "./BarCommandsManager";

@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: vitrine7-backend
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+app:
+  name: Vitrine 7
+  api-prefix: /api/v1
+  business-time-zone: ${APP_BUSINESS_TIME_ZONE:America/Bahia}
+  payment-terminal:
+    bridge:
+      command-timeout: ${APP_PAYMENT_TERMINAL_BRIDGE_COMMAND_TIMEOUT:120s}
+      long-poll-max: ${APP_PAYMENT_TERMINAL_BRIDGE_LONG_POLL_MAX:25s}
+      offline-after: ${APP_PAYMENT_TERMINAL_BRIDGE_OFFLINE_AFTER:90s}
+      pairing-code-ttl: ${APP_PAYMENT_TERMINAL_BRIDGE_PAIRING_CODE_TTL:10m}
+      expiration-interval: ${APP_PAYMENT_TERMINAL_BRIDGE_EXPIRATION_INTERVAL:5s}

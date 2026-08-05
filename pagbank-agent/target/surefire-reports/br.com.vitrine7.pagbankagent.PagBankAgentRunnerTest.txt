@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: br.com.vitrine7.pagbankagent.PagBankAgentRunnerTest
+-------------------------------------------------------------------------------
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.864 s -- in br.com.vitrine7.pagbankagent.PagBankAgentRunnerTest

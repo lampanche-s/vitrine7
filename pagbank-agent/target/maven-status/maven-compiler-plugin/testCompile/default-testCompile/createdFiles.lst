@@ -1,0 +1,6 @@
+br\com\vitrine7\pagbankagent\PagBankAgentRunnerTest$CapturedRequest.class
+br\com\vitrine7\pagbankagent\PagBankAgentRunnerTest$FakeBridge.class
+br\com\vitrine7\pagbankagent\PagBankAgentRunnerTest$FakePlugPagSdk.class
+br\com\vitrine7\pagbankagent\PagBankAgentRunnerTest.class
+br\com\vitrine7\pagbankagent\PendingResultRecoveryTest$RecordingBridgeClient.class
+br\com\vitrine7\pagbankagent\PendingResultRecoveryTest.class

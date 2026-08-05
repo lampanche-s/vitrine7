@@ -1,0 +1,14 @@
+package br.com.vitrine7.receipt.dto;
+
+import java.util.UUID;
+
+public record ReceiptOperationResponse(
+        String type,
+        Long operationId,
+        UUID checkoutId,
+        String displayName,
+        String status,
+        Long responsibleUserId,
+        String responsibleUserName
+) {
+}
