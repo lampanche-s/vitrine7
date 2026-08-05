@@ -18,7 +18,6 @@ function entry(
 ): BarSaleHistoryEntry {
   return {
     id,
-    source: "command",
     origin: `Comanda ${id}`,
     description: "1 item",
     amount: 10,

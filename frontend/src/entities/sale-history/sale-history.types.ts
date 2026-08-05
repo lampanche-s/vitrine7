@@ -8,9 +8,6 @@ export type BarPaymentMethod =
 export type BarHistoricalPaymentMethod =
   BarPaymentMethod;
 
-export type BarSaleHistorySource =
-  "command";
-
 export type BarReceiptDocument =
   "Recibo geral";
 
@@ -21,7 +18,6 @@ export type BarSaleHistoryEntry = {
   paymentStatus?: string | null;
   paymentReversedAt?: string | null;
   paymentReversalReason?: string | null;
-  source: BarSaleHistorySource;
   origin: string;
   description: string;
   receiptItems?: {

@@ -59,7 +59,6 @@ public class ReceiptReadRepository {
                         WHERE checkout_session_id = :checkoutId
                           AND status IN (
                               'APPROVED',
-                              'REVERSAL_PENDING',
                               'REVERSED'
                           )
                         """,
@@ -96,7 +95,6 @@ public class ReceiptReadRepository {
                                 WHERE payment.checkout_session_id = :checkoutId
                                   AND payment.status IN (
                                       'APPROVED',
-                                      'REVERSAL_PENDING',
                                       'REVERSED'
                                   )
                                 ORDER BY payment.approved_at ASC, payment.id ASC

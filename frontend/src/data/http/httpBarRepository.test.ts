@@ -226,8 +226,7 @@ describe("httpBarRepository", () => {
       })
     );
     expect(result.historyEntry).toMatchObject({
-      source: "command",
-      amount: 12,
+        amount: 12,
       method: "Pix",
     });
   });

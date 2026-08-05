@@ -5,80 +5,50 @@ import {
 } from "vitest";
 
 import {
-  canReverseTerminalPayment,
+  canMarkPaymentReversed,
   getPaymentReversalValidationMessage,
 } from "./payment-reversal.rules";
 
-describe("regras de estorno na maquininha", () => {
-  const approvedCreditPayment = {
+describe("regras de marcação de estorno", () => {
+  const approvedPayment = {
     paymentId: "payment-1",
     paymentStatus: "APPROVED",
-    method: "Crédito",
   };
 
-  it("permite crédito ou débito aprovado quando o usuário possui permissão", () => {
+  it("permite pagamento aprovado quando o usuário possui permissão", () => {
     expect(
-      canReverseTerminalPayment(
-        approvedCreditPayment,
-        true
-      )
-    ).toBe(true);
-
-    expect(
-      canReverseTerminalPayment(
-        {
-          ...approvedCreditPayment,
-          method: "Débito",
-        },
+      canMarkPaymentReversed(
+        approvedPayment,
         true
       )
     ).toBe(true);
   });
 
-  it.each([
-    "Dinheiro",
-    "Pix",
-  ])("não permite o método %s", (method) => {
+  it("não permite usuário sem permissão", () => {
     expect(
-      canReverseTerminalPayment(
-        {
-          ...approvedCreditPayment,
-          method,
-        },
-        true
-      )
-    ).toBe(false);
-  });
-
-  it("não permite operador sem a permissão de estorno", () => {
-    expect(
-      canReverseTerminalPayment(
-        approvedCreditPayment,
+      canMarkPaymentReversed(
+        approvedPayment,
         false
       )
     ).toBe(false);
   });
 
-  it.each([
-    "REVERSAL_PENDING",
-    "REVERSED",
-  ])("não permite pagamento no estado %s", (paymentStatus) => {
+  it("não permite pagamento já estornado", () => {
     expect(
-      canReverseTerminalPayment(
+      canMarkPaymentReversed(
         {
-          ...approvedCreditPayment,
-          paymentStatus,
+          ...approvedPayment,
+          paymentStatus: "REVERSED",
         },
         true
       )
     ).toBe(false);
   });
 
-  it("exige motivo válido e confirmação da presença do cartão e portador", () => {
+  it("exige motivo válido", () => {
     expect(
       getPaymentReversalValidationMessage(
-        "  ",
-        false
+        "  "
       )
     ).toBe(
       "O motivo deve possuir entre 3 e 255 caracteres."
@@ -86,17 +56,7 @@ describe("regras de estorno na maquininha", () => {
 
     expect(
       getPaymentReversalValidationMessage(
-        "Cliente solicitou cancelamento",
-        false
-      )
-    ).toBe(
-      "Confirme que o cartão e o portador estão presentes."
-    );
-
-    expect(
-      getPaymentReversalValidationMessage(
-        "Cliente solicitou cancelamento",
-        true
+        "Cliente solicitou cancelamento"
       )
     ).toBeNull();
   });

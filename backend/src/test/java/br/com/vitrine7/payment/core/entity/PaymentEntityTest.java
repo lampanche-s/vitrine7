@@ -7,10 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PaymentEntityTest {
 
@@ -25,29 +22,14 @@ class PaymentEntityTest {
             );
 
     @Test
-    void approvedPaymentCanBeReversed() {
+    void approvedPaymentCanBeMarkedReversed() {
         PaymentEntity payment =
                 approvedTerminalPayment();
 
-        assertTrue(
-                payment.markReversalPending()
-        );
-
-        assertEquals(
-                PaymentStatus.REVERSAL_PENDING,
-                payment.getStatus()
-        );
-
-        assertFalse(
-                payment.markReversalPending()
-        );
-
-        assertTrue(
-                payment.markReversed(
-                        20L,
-                        "  Cliente solicitou cancelamento  ",
-                        REVERSED_AT
-                )
+        payment.markReversed(
+                20L,
+                "  Cliente solicitou cancelamento  ",
+                REVERSED_AT
         );
 
         assertEquals(
@@ -69,55 +51,12 @@ class PaymentEntityTest {
                 "Cliente solicitou cancelamento",
                 payment.getReversalReason()
         );
-
-        assertFalse(
-                payment.markReversed(
-                        20L,
-                        "Cliente solicitou cancelamento",
-                        REVERSED_AT
-                )
-        );
-    }
-
-    @Test
-    void failedReversalRestoresApprovedPayment() {
-        PaymentEntity payment =
-                approvedTerminalPayment();
-
-        payment.markReversalPending();
-
-        assertTrue(
-                payment.restoreApprovedAfterReversalFailure()
-        );
-
-        assertEquals(
-                PaymentStatus.APPROVED,
-                payment.getStatus()
-        );
-
-        assertNull(
-                payment.getReversedAt()
-        );
-
-        assertNull(
-                payment.getReversedByUserId()
-        );
-
-        assertNull(
-                payment.getReversalReason()
-        );
-
-        assertFalse(
-                payment.restoreApprovedAfterReversalFailure()
-        );
     }
 
     @Test
     void reversalRequiresValidReason() {
         PaymentEntity payment =
                 approvedTerminalPayment();
-
-        payment.markReversalPending();
 
         BusinessException exception =
                 assertThrows(
@@ -135,13 +74,13 @@ class PaymentEntityTest {
         );
 
         assertEquals(
-                PaymentStatus.REVERSAL_PENDING,
+                PaymentStatus.APPROVED,
                 payment.getStatus()
         );
     }
 
     @Test
-    void processingPaymentCannotStartReversal() {
+    void nonApprovedPaymentCannotBeMarkedReversed() {
         PaymentEntity payment =
                 PaymentEntity.processingTerminal(
                         UUID.randomUUID(),
@@ -156,7 +95,11 @@ class PaymentEntityTest {
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        payment::markReversalPending
+                        () -> payment.markReversed(
+                                20L,
+                                "Cliente solicitou cancelamento",
+                                REVERSED_AT
+                        )
                 );
 
         assertEquals(

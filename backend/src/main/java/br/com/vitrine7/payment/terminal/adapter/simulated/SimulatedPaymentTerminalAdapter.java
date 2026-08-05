@@ -2,7 +2,6 @@ package br.com.vitrine7.payment.terminal.adapter.simulated;
 
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.payment.terminal.adapter.PaymentProviderAdapter;
-import br.com.vitrine7.payment.terminal.adapter.ProviderCancelCommand;
 import br.com.vitrine7.payment.terminal.adapter.ProviderConfiguration;
 import br.com.vitrine7.payment.terminal.adapter.ProviderPaymentCommand;
 import br.com.vitrine7.payment.terminal.adapter.ProviderPaymentResult;
@@ -100,16 +99,6 @@ public class SimulatedPaymentTerminalAdapter
                 null,
                 Map.of("simulated", true),
                 OffsetDateTime.now()
-        );
-    }
-
-    @Override
-    public ProviderPaymentResult cancelPayment(
-            ProviderCancelCommand command
-    ) {
-        throw new BusinessException(
-                "PAYMENT_PROVIDER_CONFIGURATION_INVALID",
-                "Cancelamento no simulador nao esta disponivel."
         );
     }
 

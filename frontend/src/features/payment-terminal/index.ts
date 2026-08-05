@@ -10,9 +10,9 @@ export {
 } from "./useTerminalPaymentFlow";
 
 export {
-  TerminalPaymentReversalModal,
-} from "./terminal-payment-reversal-modal";
+  PaymentReversalModal,
+} from "./payment-reversal-modal";
 
 export {
-  canReverseTerminalPayment,
+  canMarkPaymentReversed,
 } from "./payment-reversal.rules";

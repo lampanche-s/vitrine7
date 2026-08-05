@@ -75,7 +75,6 @@ public class BarHistoryReadRepository {
                     WHERE pay.checkout_session_id = cs.id
                       AND pay.status IN (
                           'APPROVED',
-                          'REVERSAL_PENDING',
                           'REVERSED'
                       )
                     ORDER BY pay.approved_at DESC, pay.created_at DESC

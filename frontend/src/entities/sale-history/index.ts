@@ -3,7 +3,6 @@ export type {
   BarPaymentMethod,
   BarReceiptDocument,
   BarSaleHistoryEntry,
-  BarSaleHistorySource,
 } from "./sale-history.types";
 
 export {

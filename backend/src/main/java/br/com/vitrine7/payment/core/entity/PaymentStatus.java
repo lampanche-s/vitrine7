@@ -10,18 +10,12 @@ public enum PaymentStatus {
     APPROVED,
     DECLINED,
     CANCELLED,
-    REVERSAL_PENDING,
-    REVERSED,
-    REFUND_REQUESTED,
-    REFUNDED;
+    REVERSED;
 
     public static Set<PaymentStatus> settledStatuses() {
         return EnumSet.of(
                 APPROVED,
-                REVERSAL_PENDING,
-                REVERSED,
-                REFUND_REQUESTED,
-                REFUNDED
+                REVERSED
         );
     }
 }

@@ -231,59 +231,15 @@ public class PaymentEntity {
         this.approvedByUserId = null;
     }
 
-    public boolean markReversalPending() {
-        if (status == PaymentStatus.REVERSAL_PENDING) {
-            return false;
-        }
-
-        if (status != PaymentStatus.APPROVED) {
-            throw new BusinessException(
-                    "PAYMENT_CANNOT_BE_REVERSED",
-                    "Somente um pagamento aprovado pode iniciar estorno."
-            );
-        }
-
-        this.status = PaymentStatus.REVERSAL_PENDING;
-        this.reversedAt = null;
-        this.reversedByUserId = null;
-        this.reversalReason = null;
-
-        return true;
-    }
-
-    public boolean restoreApprovedAfterReversalFailure() {
-        if (status == PaymentStatus.APPROVED) {
-            return false;
-        }
-
-        if (status != PaymentStatus.REVERSAL_PENDING) {
-            throw new BusinessException(
-                    "PAYMENT_REVERSAL_NOT_PENDING",
-                    "O pagamento nao possui estorno pendente."
-            );
-        }
-
-        this.status = PaymentStatus.APPROVED;
-        this.reversedAt = null;
-        this.reversedByUserId = null;
-        this.reversalReason = null;
-
-        return true;
-    }
-
-    public boolean markReversed(
+    public void markReversed(
             Long actorUserId,
             String reason,
             OffsetDateTime reversedAt
     ) {
-        if (status == PaymentStatus.REVERSED) {
-            return false;
-        }
-
-        if (status != PaymentStatus.REVERSAL_PENDING) {
+        if (status != PaymentStatus.APPROVED) {
             throw new BusinessException(
-                    "PAYMENT_REVERSAL_NOT_PENDING",
-                    "O pagamento nao possui estorno pendente."
+                    "PAYMENT_CANNOT_BE_REVERSED",
+                    "Somente um pagamento aprovado pode ser marcado como estornado."
             );
         }
 
@@ -308,8 +264,6 @@ public class PaymentEntity {
         this.reversedAt = reversedAt;
         this.reversedByUserId = actorUserId;
         this.reversalReason = normalizedReason;
-
-        return true;
     }
 
     public static String normalizeReversalReason(

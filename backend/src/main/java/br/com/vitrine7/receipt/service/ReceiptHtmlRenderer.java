@@ -238,6 +238,25 @@ public class ReceiptHtmlRenderer {
         label(html, "Metodo", payment.method());
         label(html, "Modo", payment.processingMode());
         label(html, "Pagamento ID", payment.paymentId().toString());
+        label(
+                html,
+                "Status do pagamento",
+                "REVERSED".equals(payment.status())
+                        ? "ESTORNADO"
+                        : payment.status()
+        );
+        if ("REVERSED".equals(payment.status())) {
+            if (payment.reversedAt() != null) {
+                label(
+                        html,
+                        "Estornado em",
+                        payment.reversedAt().format(DATE_TIME_FORMATTER)
+                );
+            }
+            if (payment.reversalReason() != null) {
+                label(html, "Motivo", payment.reversalReason());
+            }
+        }
         if (payment.terminalProvider() != null) {
             label(html, "Provedor", payment.terminalProvider());
         }

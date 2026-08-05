@@ -4,10 +4,11 @@ import br.com.vitrine7.payment.core.dto.CashPaymentRequest;
 import br.com.vitrine7.payment.core.dto.ManualPaymentRequest;
 import br.com.vitrine7.payment.core.dto.PaymentConfirmationResponse;
 import br.com.vitrine7.payment.core.dto.PaymentResponse;
+import br.com.vitrine7.payment.core.dto.PaymentReversalRequest;
 import br.com.vitrine7.payment.core.service.PaymentService;
+import br.com.vitrine7.payment.core.service.PaymentReversalService;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,13 +26,21 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
-@RequiredArgsConstructor
 @PreAuthorize(
         "hasAuthority('bar:access')"
 )
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentReversalService paymentReversalService;
+
+    public PaymentController(
+            PaymentService paymentService,
+            PaymentReversalService paymentReversalService
+    ) {
+        this.paymentService = paymentService;
+        this.paymentReversalService = paymentReversalService;
+    }
 
     @PostMapping(
             "/checkouts/{checkoutId}/payments/cash"
@@ -111,6 +120,26 @@ public class PaymentController {
                 );
 
         return response(result);
+    }
+
+
+    @PostMapping("/payments/{paymentId}/reversal")
+    @PreAuthorize("hasAuthority('payment:reverse')")
+    public PaymentResponse markReversed(
+            @PathVariable UUID paymentId,
+
+            @Valid
+            @RequestBody
+            PaymentReversalRequest request,
+
+            @AuthenticationPrincipal
+            VitrineUserPrincipal principal
+    ) {
+        return paymentReversalService.markReversed(
+                paymentId,
+                request.reason(),
+                principal.getId()
+        );
     }
 
     @GetMapping("/payments/{paymentId}")

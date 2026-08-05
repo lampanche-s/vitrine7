@@ -58,7 +58,6 @@ export function closeBarCommand(
 
   const historyEntry: BarSaleHistoryEntry = {
     id: getNextNumericId(historyEntries),
-    source: "command",
     origin: command.name,
     description: getBarCommandSummary(command),
     receiptItems: command.items.map((item) => ({

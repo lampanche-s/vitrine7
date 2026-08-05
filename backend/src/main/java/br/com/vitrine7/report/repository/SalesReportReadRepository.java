@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Repository
@@ -30,7 +31,6 @@ public class SalesReportReadRepository {
                 FROM payments payment
                 WHERE payment.status IN (
                     'APPROVED',
-                    'REVERSAL_PENDING',
                     'REVERSED'
                 )
                 ORDER BY
@@ -76,10 +76,7 @@ public class SalesReportReadRepository {
                     ON creator.id = tab.created_by_user_id
                 WHERE tab.status = 'CLOSED'
                   AND checkout.status = 'FINALIZED'
-                  AND payment.status IN (
-                      'APPROVED',
-                      'REVERSAL_PENDING'
-                  )
+                  AND payment.status = 'APPROVED'
                   AND (
                       CAST(:fromInstant AS timestamptz) IS NULL
                       OR COALESCE(
@@ -330,8 +327,24 @@ public class SalesReportReadRepository {
 
     private MapSqlParameterSource params(SalesReportFilters filters) {
         return new MapSqlParameterSource()
-                .addValue("fromInstant", filters.fromInstant())
-                .addValue("toInstant", filters.toExclusiveInstant())
+                .addValue(
+                        "fromInstant",
+                        filters.fromInstant() == null
+                                ? null
+                                : OffsetDateTime.ofInstant(
+                                        filters.fromInstant(),
+                                        ZoneOffset.UTC
+                                )
+                )
+                .addValue(
+                        "toInstant",
+                        filters.toExclusiveInstant() == null
+                                ? null
+                                : OffsetDateTime.ofInstant(
+                                        filters.toExclusiveInstant(),
+                                        ZoneOffset.UTC
+                                )
+                )
                 .addValue("scope", filters.scope().name());
     }
 

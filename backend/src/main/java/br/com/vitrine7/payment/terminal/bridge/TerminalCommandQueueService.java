@@ -10,7 +10,6 @@ import br.com.vitrine7.payment.terminal.provider.PaymentProviderCode;
 import br.com.vitrine7.payment.terminal.provider.ProviderPaymentStatus;
 import br.com.vitrine7.payment.terminal.repository.PaymentTerminalTransactionRepository;
 import br.com.vitrine7.payment.terminal.service.TerminalPaymentCompletionService;
-import br.com.vitrine7.payment.terminal.service.TerminalPaymentReversalCompletionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -56,8 +55,6 @@ public class TerminalCommandQueueService {
     private final TerminalDeviceRepository deviceRepository;
     private final PaymentTerminalTransactionRepository transactionRepository;
     private final TerminalPaymentCompletionService completionService;
-    private final TerminalPaymentReversalCompletionService
-            reversalCompletionService;
     private final CheckoutFinalizationService finalizationService;
     private final TerminalBridgeProperties properties;
     private final ObjectMapper mapper;
@@ -167,95 +164,6 @@ public class TerminalCommandQueueService {
         return commandId;
     }
 
-    @Transactional
-    public UUID createReversal(
-            UUID transactionId,
-            UUID deviceId,
-            Long actorUserId,
-            String reason,
-            String originalProviderReference
-    ) {
-        TerminalCommandRepository.CommandTransaction
-                transaction =
-                repository.findTransaction(transactionId);
-
-        if (transaction == null) {
-            throw new NotFoundException(
-                    "PAYMENT_TERMINAL_TRANSACTION_NOT_FOUND",
-                    "Transacao nao encontrada para estorno."
-            );
-        }
-
-        UUID commandId = UUID.randomUUID();
-
-        ObjectNode payload =
-                mapper.createObjectNode();
-
-        payload.put(
-                "commandId",
-                commandId.toString()
-        );
-
-        payload.put(
-                "transactionId",
-                transaction.id().toString()
-        );
-
-        payload.put(
-                "expectedUserReference",
-                paymentUserReference(
-                        transaction.id()
-                )
-        );
-
-        if (originalProviderReference != null
-                && !originalProviderReference.isBlank()) {
-
-            payload.put(
-                    "originalProviderReference",
-                    originalProviderReference.trim()
-            );
-        }
-
-        payload.put(
-                "requestedByUserId",
-                actorUserId
-        );
-
-        payload.put(
-                "reason",
-                reason
-        );
-
-        payload.put(
-                "providerCode",
-                transaction.providerCode()
-        );
-
-        payload.put(
-                "amountCents",
-                transaction.amountCents()
-        );
-
-        payload.put(
-                "timeoutSeconds",
-                properties.commandTimeout()
-                        .toSeconds()
-        );
-
-        repository.createReversal(
-                commandId,
-                deviceId,
-                transaction.id(),
-                payload,
-                now().plus(
-                        properties.commandTimeout()
-                )
-        );
-
-        return commandId;
-    }
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TerminalCommandDtos.Delivery reserveNext(UUID deviceId) {
         TerminalCommandDtos.Delivery delivery = repository.reserveNext(deviceId, now());
@@ -288,12 +196,9 @@ public class TerminalCommandQueueService {
                 requireOwned(commandId, deviceId);
 
         TerminalCommandDtos.ResultRequest effectiveRequest =
-                reconcileReversalResult(
+                reconcileQueryResult(
                         before,
-                        reconcileQueryResult(
-                                before,
-                                request
-                        )
+                        request
                 );
 
         JsonNode normalized =
@@ -421,73 +326,6 @@ public class TerminalCommandQueueService {
     }
 
     private TerminalCommandDtos.ResultRequest
-    reconcileReversalResult(
-            TerminalCommandRepository.CommandSnapshot command,
-            TerminalCommandDtos.ResultRequest request
-    ) {
-        if (!command.type().equals("REVERSE_PAYMENT")
-                || request.status()
-                != ProviderPaymentStatus.APPROVED) {
-
-            return request;
-        }
-
-        PaymentTerminalTransactionEntity transaction =
-                transactionRepository
-                        .findById(command.transactionId())
-                        .orElseThrow(() ->
-                                new NotFoundException(
-                                        "PAYMENT_TERMINAL_TRANSACTION_NOT_FOUND",
-                                        "Transacao do estorno nao encontrada."
-                                )
-                        );
-
-        String expectedUserReference =
-                paymentUserReference(
-                        command.transactionId()
-                );
-
-        String returnedUserReference =
-                text(
-                        request.metadata(),
-                        "userReference"
-                );
-
-        boolean userReferenceMatches =
-                returnedUserReference != null
-                        && expectedUserReference
-                        .equalsIgnoreCase(
-                                returnedUserReference.trim()
-                        );
-
-        boolean providerReferenceMatches =
-                transaction.getProviderReference() != null
-                        && request.providerReference() != null
-                        && transaction
-                        .getProviderReference()
-                        .equalsIgnoreCase(
-                                request.providerReference()
-                                        .trim()
-                        );
-
-        if (userReferenceMatches
-                || providerReferenceMatches) {
-
-            return request;
-        }
-
-        return new TerminalCommandDtos.ResultRequest(
-                ProviderPaymentStatus.UNKNOWN,
-                request.providerReference(),
-                request.providerRequestId(),
-                null,
-                "PAYMENT_TERMINAL_REVERSAL_MISMATCH",
-                "O estorno retornado nao pertence ao pagamento informado.",
-                request.metadata().deepCopy()
-        );
-    }
-
-    private TerminalCommandDtos.ResultRequest
     reconcileQueryResult(
             TerminalCommandRepository.CommandSnapshot command,
             TerminalCommandDtos.ResultRequest request
@@ -535,32 +373,6 @@ public class TerminalCommandQueueService {
             TerminalCommandDtos.ResultRequest request,
             OffsetDateTime now
     ) {
-        if (command.type().equals(
-                "REVERSE_PAYMENT"
-        )) {
-            TerminalCommandRepository.ReversalContext context =
-                    repository.findReversalContext(
-                            command.id()
-                    );
-
-            if (context == null) {
-                throw new BusinessException(
-                        "PAYMENT_TERMINAL_REVERSAL_CONTEXT_NOT_FOUND",
-                        "Os dados da solicitacao de estorno nao foram encontrados."
-                );
-            }
-
-            reversalCompletionService.complete(
-                    command.transactionId(),
-                    request.status(),
-                    context.requestedByUserId(),
-                    context.reason(),
-                    now
-            );
-
-            return;
-        }
-
         boolean shouldComplete =
                 command.type().equals(
                         "INITIATE_PAYMENT"

@@ -164,13 +164,9 @@ function formatHistoryTime(value: string): string {
 
 function paymentHistoryStatus(
   status: string | null
-): "Concluída" | "Estorno pendente" | "Estornada" {
+): "Concluída" | "Estornada" {
   if (status === "REVERSED") {
     return "Estornada";
-  }
-
-  if (status === "REVERSAL_PENDING") {
-    return "Estorno pendente";
   }
 
   return "Concluída";
@@ -182,7 +178,6 @@ function isCompletedHistoryEntry(entry: BarHistoryResponse): boolean {
     entry.checkoutStatus === "FINALIZED" &&
     [
       "APPROVED",
-      "REVERSAL_PENDING",
       "REVERSED",
     ].includes(
       entry.paymentStatus ?? ""
@@ -210,7 +205,6 @@ function mapHistoryEntry(entry: BarHistoryResponse): BarSaleHistoryEntry {
       entry.paymentReversedAt,
     paymentReversalReason:
       entry.paymentReversalReason,
-    source: "command",
     origin: `Comanda ${entry.displayName}`,
     description: `${lines}, ${units}`,
     amount: entry.totalCents / 100,
@@ -700,8 +694,7 @@ export const httpBarRepository: BarRepository = {
       historyEntry: {
         id: prepared.id,
         checkoutId: prepared.checkoutId,
-        source: "command",
-        origin: `Comanda ${prepared.name}`,
+            origin: `Comanda ${prepared.name}`,
         description: closedCommand.items
           .map((item) => `${item.quantity}x ${item.name}`)
           .join(", "),

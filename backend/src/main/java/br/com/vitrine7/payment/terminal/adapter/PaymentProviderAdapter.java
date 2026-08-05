@@ -20,8 +20,4 @@ public interface PaymentProviderAdapter {
     ProviderPaymentResult queryPayment(
             ProviderQueryCommand command
     );
-
-    ProviderPaymentResult cancelPayment(
-            ProviderCancelCommand command
-    );
 }

@@ -13,7 +13,6 @@ import br.com.vitrine7.payment.terminal.provider.PaymentProviderEnvironment;
 import br.com.vitrine7.payment.terminal.provider.ProviderPaymentStatus;
 import br.com.vitrine7.payment.terminal.repository.PaymentTerminalTransactionRepository;
 import br.com.vitrine7.payment.terminal.service.TerminalPaymentCompletionService;
-import br.com.vitrine7.payment.terminal.service.TerminalPaymentReversalCompletionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -54,11 +53,6 @@ class TerminalCommandQueueServiceTest {
             mock(PaymentTerminalTransactionRepository.class);
     private final TerminalPaymentCompletionService completionService =
             mock(TerminalPaymentCompletionService.class);
-    private final TerminalPaymentReversalCompletionService
-            reversalCompletionService =
-            mock(
-                    TerminalPaymentReversalCompletionService.class
-            );
     private final CheckoutFinalizationService finalizationService =
             mock(CheckoutFinalizationService.class);
     private final TransactionTemplate transactionTemplate =
@@ -79,7 +73,6 @@ class TerminalCommandQueueServiceTest {
                 deviceRepository,
                 transactionRepository,
                 completionService,
-                reversalCompletionService,
                 finalizationService,
                 new TerminalBridgeProperties(
                         Duration.ofSeconds(2),
@@ -681,112 +674,6 @@ class TerminalCommandQueueServiceTest {
         ).mirrorTransactionDelivery(
                 any(),
                 any()
-        );
-    }
-
-    @Test
-    void approvedReversalUsesOnlyReversalFlow() {
-        String expectedReference =
-                TerminalCommandQueueService
-                        .paymentUserReference(
-                                transactionId
-                        );
-
-        TerminalCommandRepository.CommandSnapshot before =
-                new TerminalCommandRepository.CommandSnapshot(
-                        commandId,
-                        deviceId,
-                        transactionId,
-                        "REVERSE_PAYMENT",
-                        "ACKNOWLEDGED",
-                        mapper.createObjectNode(),
-                        OffsetDateTime.now()
-                                .plusMinutes(1),
-                        null,
-                        null
-                );
-
-        TerminalCommandRepository.CommandSnapshot after =
-                new TerminalCommandRepository.CommandSnapshot(
-                        commandId,
-                        deviceId,
-                        transactionId,
-                        "REVERSE_PAYMENT",
-                        "COMPLETED",
-                        mapper.createObjectNode(),
-                        OffsetDateTime.now()
-                                .plusMinutes(1),
-                        null,
-                        null
-                );
-
-        when(commandRepository.find(commandId))
-                .thenReturn(before)
-                .thenReturn(after);
-
-        when(commandRepository.finish(
-                eq(commandId),
-                eq(deviceId),
-                eq("COMPLETED"),
-                any(),
-                any(),
-                any(),
-                any()
-        )).thenReturn(1);
-
-        when(transactionRepository.findById(
-                transactionId
-        )).thenReturn(
-                Optional.of(transaction())
-        );
-
-        when(commandRepository.findReversalContext(
-                commandId
-        )).thenReturn(
-                new TerminalCommandRepository.ReversalContext(
-                        20L,
-                        "Cliente solicitou cancelamento"
-                )
-        );
-
-        ObjectNode metadata =
-                mapper.createObjectNode();
-
-        metadata.put(
-                "operationType",
-                "REVERSAL"
-        );
-
-        metadata.put(
-                "userReference",
-                expectedReference
-        );
-
-        service.submitResult(
-                commandId,
-                deviceId,
-                new TerminalCommandDtos.ResultRequest(
-                        ProviderPaymentStatus.APPROVED,
-                        "REVERSAL-TX-123",
-                        commandId.toString(),
-                        "REVERSAL-NSU-123",
-                        null,
-                        null,
-                        metadata
-                )
-        );
-
-        verify(reversalCompletionService).complete(
-                eq(transactionId),
-                eq(ProviderPaymentStatus.APPROVED),
-                eq(20L),
-                eq("Cliente solicitou cancelamento"),
-                any(OffsetDateTime.class)
-        );
-
-        verifyNoInteractions(
-                completionService,
-                finalizationService
         );
     }
 

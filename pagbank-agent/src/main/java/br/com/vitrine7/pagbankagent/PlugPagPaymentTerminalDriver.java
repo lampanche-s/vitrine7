@@ -275,63 +275,6 @@ public class PlugPagPaymentTerminalDriver
         }
     }
 
-    @Override
-    public Optional<BridgeDtos.ResultRequest> reversePayment(
-            BridgeDtos.CommandDelivery command
-    ) {
-        Object plugPag = null;
-
-        String providerRequestId =
-                command.commandId().toString();
-
-        try {
-            plugPag = newPlugPag();
-
-            BridgeDtos.ResultRequest setupFailure =
-                    initializePlugPag(
-                            plugPag,
-                            providerRequestId
-                    );
-
-            if (setupFailure != null) {
-                return Optional.of(setupFailure);
-            }
-
-            int result = (Integer) invoke(
-                    plugPag,
-                    "CancelTransaction"
-            );
-
-            return Optional.of(
-                    mapReversalResult(
-                            plugPag,
-                            result,
-                            providerRequestId
-                    )
-            );
-        } catch (Exception exception) {
-            return Optional.of(
-                    error(
-                            providerRequestId,
-                            "PAGBANK_AGENT_REVERSAL_ERROR",
-                            "Falha ao executar o estorno PlugPag: "
-                                    + rootMessage(exception),
-                            plugPag
-                    )
-            );
-        } finally {
-            if (plugPag != null) {
-                try {
-                    invoke(
-                            plugPag,
-                            "UnloadDriverConnection"
-                    );
-                } catch (Exception ignored) {
-                }
-            }
-        }
-    }
-
     private BridgeDtos.ResultRequest initializePlugPag(
             Object plugPag,
             String providerRequestId
@@ -587,129 +530,6 @@ public class PlugPagPaymentTerminalDriver
         return metadata;
     }
 
-    private BridgeDtos.ResultRequest mapReversalResult(
-            Object plugPag,
-            int result,
-            String providerRequestId
-    ) {
-        ObjectNode metadata =
-                reversalMetadata(plugPag);
-
-        String transactionCode =
-                safeSdkText(
-                        plugPag,
-                        "getTransactionCode"
-                );
-
-        String hostNsu =
-                safeSdkText(
-                        plugPag,
-                        "getHostNsu"
-                );
-
-        String userReference =
-                safeSdkText(
-                        plugPag,
-                        "getUserReference"
-                );
-
-        String providerReference =
-                firstText(
-                        transactionCode,
-                        hostNsu,
-                        userReference
-                );
-
-        String message =
-                safeSdkText(
-                        plugPag,
-                        "getMessage"
-                );
-
-        if (result == retOk) {
-            return new BridgeDtos.ResultRequest(
-                    ProviderPaymentStatus.APPROVED,
-                    providerReference,
-                    providerRequestId,
-                    hostNsu,
-                    null,
-                    null,
-                    metadata
-            );
-        }
-
-        if (isCancelled(result, message)) {
-            return new BridgeDtos.ResultRequest(
-                    ProviderPaymentStatus.CANCELLED,
-                    providerReference,
-                    providerRequestId,
-                    null,
-                    Integer.toString(result),
-                    failureMessage(result, message),
-                    metadata
-            );
-        }
-
-        return new BridgeDtos.ResultRequest(
-                ProviderPaymentStatus.ERROR,
-                providerReference,
-                providerRequestId,
-                null,
-                Integer.toString(result),
-                failureMessage(result, message),
-                metadata
-        );
-    }
-
-    private ObjectNode reversalMetadata(
-            Object plugPag
-    ) {
-        ObjectNode metadata = metadata(plugPag);
-
-        metadata.put(
-                "operationType",
-                "REVERSAL"
-        );
-
-        put(
-                metadata,
-                "userReference",
-                safeSdkText(
-                        plugPag,
-                        "getUserReference"
-                )
-        );
-
-        put(
-                metadata,
-                "transactionDate",
-                safeSdkText(
-                        plugPag,
-                        "getDate"
-                )
-        );
-
-        put(
-                metadata,
-                "transactionTime",
-                safeSdkText(
-                        plugPag,
-                        "getTime"
-                )
-        );
-
-        put(
-                metadata,
-                "terminalSerialNumber",
-                safeSdkText(
-                        plugPag,
-                        "getTerminalSerialNumber"
-                )
-        );
-
-        return metadata;
-    }
-
     private int paymentMethod(String value) {
         String normalized = normalize(value);
         return switch (normalized) {
@@ -836,9 +656,6 @@ public class PlugPagPaymentTerminalDriver
                 int.class, int.class, int.class, String.class, String.class);
         plugPagClass.getMethod(
                 "GetLastApprovedTransactionStatus"
-        );
-        plugPagClass.getMethod(
-                "CancelTransaction"
         );
         plugPagClass.getMethod("UnloadDriverConnection");
         plugPagClass.getMethod("getMessage");

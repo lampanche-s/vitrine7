@@ -162,74 +162,6 @@ public class TerminalCommandRepository {
         return commandId;
     }
 
-    public UUID createReversal(
-            UUID commandId,
-            UUID deviceId,
-            UUID transactionId,
-            JsonNode payload,
-            OffsetDateTime expiresAt
-    ) {
-        jdbc.update("""
-                INSERT INTO payment_terminal_commands
-                  (
-                    id,
-                    device_id,
-                    terminal_transaction_id,
-                    command_type,
-                    status,
-                    idempotency_key,
-                    payload,
-                    result,
-                    available_at,
-                    expires_at
-                  )
-                VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    'REVERSE_PAYMENT',
-                    'QUEUED',
-                    ?,
-                    CAST(? AS jsonb),
-                    '{}'::jsonb,
-                    CURRENT_TIMESTAMP,
-                    ?
-                )
-                """,
-                commandId,
-                deviceId,
-                transactionId,
-                commandId,
-                json(payload),
-                expiresAt
-        );
-
-        return commandId;
-    }
-
-    public ReversalContext findReversalContext(
-            UUID commandId
-    ) {
-        return jdbc.query("""
-                SELECT
-                    (payload ->> 'requestedByUserId')::bigint
-                        AS requested_by_user_id,
-                    payload ->> 'reason'
-                        AS reason
-                FROM payment_terminal_commands
-                WHERE id = ?
-                  AND command_type = 'REVERSE_PAYMENT'
-                """,
-                (rs, number) -> new ReversalContext(
-                        rs.getLong(
-                                "requested_by_user_id"
-                        ),
-                        rs.getString("reason")
-                ),
-                commandId
-        ).stream().findFirst().orElse(null);
-    }
-
     public CommandSnapshot findByTransaction(UUID transactionId) {
         return jdbc.query(snapshotSql() + " WHERE terminal_transaction_id=? AND command_type='INITIATE_PAYMENT'",
                 (rs, n) -> snapshot(rs), transactionId).stream().findFirst().orElse(null);
@@ -381,9 +313,5 @@ public class TerminalCommandRepository {
     public record CommandSnapshot(UUID id, UUID deviceId, UUID transactionId, String type, String status,
                                   JsonNode result, OffsetDateTime expiresAt, String failureCode, String failureMessage) {}
 
-    public record ReversalContext(
-            Long requestedByUserId,
-            String reason
-    ) {
-    }
+
 }

@@ -25,7 +25,6 @@ import {
 
 import type {
   BarSaleHistoryEntry,
-  BarSaleHistorySource,
 } from "../../../entities/sale-history";
 
 import {
@@ -47,8 +46,8 @@ import {
 } from "../../access";
 
 import {
-  canReverseTerminalPayment,
-  TerminalPaymentReversalModal,
+  canMarkPaymentReversed,
+  PaymentReversalModal,
 } from "../../payment-terminal";
 
 const BAR_HISTORY_PAGE_SIZE = 7;
@@ -77,7 +76,6 @@ export function BarSalesHistory({
     page: number;
     size: number;
     search?: string;
-    source?: BarSaleHistorySource;
   }) => Promise<{
     entries: BarSaleHistoryEntry[];
     page: number;
@@ -208,7 +206,7 @@ export function BarSalesHistory({
   }
 
   const canReverseSelectedPayment =
-    canReverseTerminalPayment(
+    canMarkPaymentReversed(
       selectedEntry,
       can("payment:reverse")
     );
@@ -401,7 +399,7 @@ export function BarSalesHistory({
                       closeDetailsModal();
                     }}
                   >
-                    Estornar pagamento
+                    Marcar como estornada
                   </Button>
                 ) : null}
 
@@ -436,7 +434,7 @@ export function BarSalesHistory({
         onClose={receiptViewer.closeReceipt}
       />
 
-      <TerminalPaymentReversalModal
+      <PaymentReversalModal
         open={Boolean(reversalEntry)}
         paymentId={
           reversalEntry?.paymentId ?? null

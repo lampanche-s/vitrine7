@@ -45,14 +45,6 @@ class PagBankAgentRunnerTest {
         }
 
         System.clearProperty(
-                "v7.fakePlugPag.reversalCalls"
-        );
-
-        System.clearProperty(
-                "v7.fakePlugPag.reversalResult"
-        );
-
-        System.clearProperty(
                 "v7.fakePlugPag.userReference"
         );
     }
@@ -303,68 +295,6 @@ class PagBankAgentRunnerTest {
     }
 
     @Test
-    void plugPagExecutesRealReversalCommand()
-            throws Exception {
-        FakePlugPagSdk sdk =
-                FakePlugPagSdk.create(tempDir);
-
-        System.setProperty(
-                "v7.fakePlugPag.reversalResult",
-                "0"
-        );
-
-        System.setProperty(
-                "v7.fakePlugPag.userReference",
-                "SALE123ABC"
-        );
-
-        try (PlugPagPaymentTerminalDriver driver =
-                     plugPagDriver(sdk)) {
-
-            BridgeDtos.ResultRequest result =
-                    driver.processCommand(
-                            reverseCommand()
-                    ).orElseThrow();
-
-            assertEquals(
-                    ProviderPaymentStatus.APPROVED,
-                    result.status()
-            );
-
-            assertEquals(
-                    "TX123",
-                    result.providerReference()
-            );
-
-            assertEquals(
-                    "NSU789",
-                    result.authorizationCode()
-            );
-
-            assertEquals(
-                    "REVERSAL",
-                    result.metadata()
-                            .path("operationType")
-                            .asText()
-            );
-
-            assertEquals(
-                    "SALE123ABC",
-                    result.metadata()
-                            .path("userReference")
-                            .asText()
-            );
-
-            assertEquals(
-                    "1",
-                    System.getProperty(
-                            "v7.fakePlugPag.reversalCalls"
-                    )
-            );
-        }
-    }
-
-    @Test
     void plugPagFailsClearlyWhenJarDllOrConfigurationIsMissing() throws Exception {
         FakePlugPagSdk sdk = FakePlugPagSdk.create(tempDir);
 
@@ -574,26 +504,6 @@ class PagBankAgentRunnerTest {
         );
     }
 
-    private BridgeDtos.CommandDelivery reverseCommand() {
-        return new BridgeDtos.CommandDelivery(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                "REVERSE_PAYMENT",
-                mapper.createObjectNode()
-                        .put(
-                                "expectedUserReference",
-                                "SALE123ABC"
-                        )
-                        .put(
-                                "providerCode",
-                                "PAGBANK"
-                        ),
-                OffsetDateTime.now()
-                        .plusMinutes(1),
-                1
-        );
-    }
-
     private record FakePlugPagSdk(
             Path jarPath,
             Path nativePath
@@ -635,26 +545,6 @@ class PagBankAgentRunnerTest {
                             System.setProperty("v7.fakePlugPag.lastMethod", Integer.toString(method));
                             System.setProperty("v7.fakePlugPag.lastReference", reference);
                             return Integer.parseInt(System.getProperty("v7.fakePlugPag.result", "0"));
-                        }
-                        public int CancelTransaction() {
-                            int calls = Integer.parseInt(
-                                    System.getProperty(
-                                            "v7.fakePlugPag.reversalCalls",
-                                            "0"
-                                    )
-                            );
-
-                            System.setProperty(
-                                    "v7.fakePlugPag.reversalCalls",
-                                    Integer.toString(calls + 1)
-                            );
-
-                            return Integer.parseInt(
-                                    System.getProperty(
-                                            "v7.fakePlugPag.reversalResult",
-                                            "0"
-                                    )
-                            );
                         }
                         public int GetLastApprovedTransactionStatus() {
                             return Integer.parseInt(

@@ -17,10 +17,6 @@ public interface PaymentTerminalDriver {
             return queryLastApprovedTransaction(command);
         }
 
-        if ("REVERSE_PAYMENT".equals(command.commandType())) {
-            return reversePayment(command);
-        }
-
         return unsupportedCommand(command);
     }
 
@@ -30,12 +26,6 @@ public interface PaymentTerminalDriver {
 
     default Optional<BridgeDtos.ResultRequest>
     queryLastApprovedTransaction(
-            BridgeDtos.CommandDelivery command
-    ) throws Exception {
-        return unsupportedCommand(command);
-    }
-
-    default Optional<BridgeDtos.ResultRequest> reversePayment(
             BridgeDtos.CommandDelivery command
     ) throws Exception {
         return unsupportedCommand(command);

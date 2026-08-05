@@ -3,9 +3,6 @@ package br.com.vitrine7.payment.terminal.controller;
 import br.com.vitrine7.payment.terminal.dto.PaymentTerminalTransactionResponse;
 import br.com.vitrine7.payment.terminal.dto.TerminalPaymentConfirmationResponse;
 import br.com.vitrine7.payment.terminal.dto.TerminalPaymentRequest;
-import br.com.vitrine7.payment.terminal.dto.TerminalPaymentReversalRequest;
-import br.com.vitrine7.payment.terminal.dto.TerminalPaymentReversalResponse;
-import br.com.vitrine7.payment.terminal.service.TerminalPaymentReversalService;
 import br.com.vitrine7.payment.terminal.service.TerminalPaymentService;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import jakarta.validation.Valid;
@@ -34,9 +31,6 @@ import java.util.UUID;
 public class TerminalPaymentController {
 
     private final TerminalPaymentService terminalPaymentService;
-
-    private final TerminalPaymentReversalService
-            reversalService;
 
     @PostMapping(
             "/checkouts/{checkoutId}/payments/terminal"
@@ -102,26 +96,4 @@ public class TerminalPaymentController {
         );
     }
 
-    @PostMapping(
-            "/payments/{paymentId}/terminal-reversal"
-    )
-    @PreAuthorize(
-            "hasAuthority('payment:reverse')"
-    )
-    public TerminalPaymentReversalResponse reverse(
-            @PathVariable UUID paymentId,
-
-            @Valid
-            @RequestBody
-            TerminalPaymentReversalRequest request,
-
-            @AuthenticationPrincipal
-            VitrineUserPrincipal principal
-    ) {
-        return reversalService.reverse(
-                paymentId,
-                request.reason(),
-                principal
-        );
-    }
 }

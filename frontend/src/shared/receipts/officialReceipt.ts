@@ -127,18 +127,6 @@ function optionalLine(
 function paymentReversalLines(
   payment: OfficialReceiptResponse["payment"]
 ): ReceiptLine[] {
-  if (
-    payment.status ===
-    "REVERSAL_PENDING"
-  ) {
-    return [
-      {
-        label: "Pagamento",
-        value: "Estorno pendente",
-      },
-    ];
-  }
-
   if (payment.status !== "REVERSED") {
     return [];
   }
