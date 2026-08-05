@@ -7,22 +7,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReceiptAuthorizationVerifier {
 
-    public void verify(
-            String operationType,
-            VitrineUserPrincipal principal
-    ) {
-        String required = switch (operationType) {
-            case "BAR_COMMAND" -> "bar:access";
-            case "LAVA_WORK_ORDER" -> "lava:access";
-            default -> throw new AuthorizationDeniedException(
-                    "Access denied"
-            );
-        };
+    public void verify(String operationType, VitrineUserPrincipal principal) {
+        if (!"BAR_COMMAND".equals(operationType)) {
+            throw new AuthorizationDeniedException("Access denied");
+        }
 
         boolean allowed = principal.getAuthorities()
                 .stream()
                 .anyMatch(authority ->
-                        required.equals(authority.getAuthority())
+                        "bar:access".equals(authority.getAuthority())
                 );
 
         if (!allowed) {

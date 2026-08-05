@@ -39,4 +39,16 @@ public interface AuthSessionRepository extends
             @Param("sessionId") UUID sessionId,
             @Param("now") Instant now
     );
+
+    @Modifying
+    @Query("""
+            UPDATE AuthSessionEntity session
+               SET session.revokedAt = :now
+             WHERE session.userId = :userId
+               AND session.revokedAt IS NULL
+            """)
+    int revokeAllByUserId(
+            @Param("userId") Long userId,
+            @Param("now") Instant now
+    );
 }

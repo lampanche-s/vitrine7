@@ -12,14 +12,11 @@ export type {
 } from "./bar.repository";
 
 export type {
-  LavaFinanceBreakdown,
-  LavaFinancePageRequest,
-  LavaFinancePageResult,
-  LavaFinanceSummary,
-  LavaFinanceTransaction,
-  LavaRepository,
-  LavaHistoryPageResult,
-  LavaHistoryPageRequest,
-  LavaRepositorySnapshot,
-  OpenLavaWorkOrderRepositoryResult,
-} from "./lava.repository";
+  ClientsRepository,
+} from "./clients.repository";
+
+export type {
+  ReportsRepository,
+  SalesReport,
+  SalesReportScope,
+} from "./reports.repository";

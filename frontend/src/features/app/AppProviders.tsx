@@ -26,13 +26,6 @@ import {
 function createSessionInitialAdminDomainState(): AdminDomainState {
   return {
     users: [],
-    settings: {
-      companyName: "",
-      cnpj: "",
-      phone: "",
-      address: "",
-      adminMode: false,
-    },
   };
 }
 

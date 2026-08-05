@@ -56,7 +56,7 @@ export function ReportExportModal({
   onConfirm,
 }: ReportExportModalProps) {
   const reportName =
-    scope === "lava"
+    scope === "SERVICE"
       ? "Lava Jato"
       : "Espeto Bar";
 

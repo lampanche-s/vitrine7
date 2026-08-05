@@ -3,7 +3,6 @@ package br.com.vitrine7.auth.service;
 import br.com.vitrine7.auth.dto.LoginRequest;
 import br.com.vitrine7.common.exception.AccountBlockedException;
 import br.com.vitrine7.common.exception.InvalidCredentialsException;
-import br.com.vitrine7.system.preference.repository.UserPreferenceRepository;
 import br.com.vitrine7.system.user.entity.UserEntity;
 import br.com.vitrine7.system.user.entity.UserRole;
 import br.com.vitrine7.system.user.entity.UserStatus;
@@ -42,8 +41,6 @@ class AuthServiceTest {
             mock(AuthenticationManager.class);
     private final UserRepository userRepository =
             mock(UserRepository.class);
-    private final UserPreferenceRepository userPreferenceRepository =
-            mock(UserPreferenceRepository.class);
     private final JwtService jwtService =
             mock(JwtService.class);
     private final AuthSessionService authSessionService =
@@ -53,7 +50,6 @@ class AuthServiceTest {
             new AuthService(
                     authenticationManager,
                     userRepository,
-                    userPreferenceRepository,
                     jwtService,
                     authSessionService
             );
@@ -62,7 +58,7 @@ class AuthServiceTest {
     void activeUserWithCorrectPasswordReceivesTokenAndSession() {
         UserEntity user = user(UserStatus.ATIVO, false);
         VitrineUserPrincipal principal =
-                new VitrineUserPrincipal(user, Set.of(Permission.LAVA_ACCESS));
+                new VitrineUserPrincipal(user, Set.of(Permission.BAR_ACCESS));
         Authentication authentication =
                 new UsernamePasswordAuthenticationToken(
                         principal,
@@ -80,8 +76,6 @@ class AuthServiceTest {
                 .thenReturn(authentication);
         when(userRepository.findById(user.getId()))
                 .thenReturn(Optional.of(user));
-        when(userPreferenceRepository.findById(user.getId()))
-                .thenReturn(Optional.empty());
         when(jwtService.generate(principal))
                 .thenReturn(token);
 
@@ -181,8 +175,6 @@ class AuthServiceTest {
                 .thenReturn(authentication);
         when(userRepository.findById(user.getId()))
                 .thenReturn(Optional.of(user));
-        when(userPreferenceRepository.findById(user.getId()))
-                .thenReturn(Optional.empty());
         when(jwtService.generate(principal))
                 .thenReturn(token);
 
@@ -240,8 +232,6 @@ class AuthServiceTest {
                 .thenReturn(authentication);
         when(userRepository.findById(user.getId()))
                 .thenReturn(Optional.of(user));
-        when(userPreferenceRepository.findById(user.getId()))
-                .thenReturn(Optional.empty());
         when(jwtService.generate(principal))
                 .thenReturn(token);
 

@@ -1,7 +1,7 @@
 package br.com.vitrine7.receipt.service;
 
 import br.com.vitrine7.common.exception.BusinessException;
-import br.com.vitrine7.finance.config.FinanceProperties;
+import br.com.vitrine7.receipt.dto.ReceiptEstablishmentResponse;
 import br.com.vitrine7.receipt.dto.ReceiptLineResponse;
 import br.com.vitrine7.receipt.dto.ReceiptOperationResponse;
 import br.com.vitrine7.receipt.dto.ReceiptPaymentResponse;
@@ -9,7 +9,7 @@ import br.com.vitrine7.receipt.dto.ReceiptResponse;
 import br.com.vitrine7.receipt.repository.ReceiptReadRepository;
 import br.com.vitrine7.receipt.repository.ReceiptReadRepository.CheckoutReceiptRow;
 import br.com.vitrine7.receipt.repository.ReceiptReadRepository.TabReceiptRow;
-import br.com.vitrine7.receipt.repository.ReceiptReadRepository.WorkOrderReceiptRow;
+import br.com.vitrine7.common.config.BusinessProperties;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,68 +28,48 @@ public class ReceiptService {
 
     private final ReceiptReadRepository repository;
     private final ReceiptAuthorizationVerifier authorizationVerifier;
-    private final FinanceProperties financeProperties;
+    private final BusinessProperties businessProperties;
 
     @Transactional(readOnly = true)
     public ReceiptResponse getReceipt(
             UUID checkoutId,
             VitrineUserPrincipal principal
     ) {
-        CheckoutReceiptRow checkout =
-                repository.findCheckout(checkoutId);
-
-        authorizationVerifier.verify(
-                checkout.operationType(),
-                principal
-        );
-
+        CheckoutReceiptRow checkout = repository.findCheckout(checkoutId);
+        authorizationVerifier.verify(checkout.operationType(), principal);
         validateCheckoutReady(checkout);
 
-        long paymentCount =
-                repository.countReceiptPayments(checkoutId);
-
-        if (paymentCount != 1L) {
+        if (repository.countReceiptPayments(checkoutId) != 1L) {
             throw new BusinessException(
                     "RECEIPT_APPROVED_PAYMENT_REQUIRED",
                     "O recibo exige exatamente um pagamento concluido."
             );
         }
 
-        ReceiptPaymentResponse payment =
-                repository.findReceiptPayment(
-                                checkoutId,
-                                timeZone().getId()
-                        )
-                        .orElseThrow(() -> new BusinessException(
-                                "RECEIPT_APPROVED_PAYMENT_REQUIRED",
-                                "O recibo exige um pagamento concluido."
-                        ));
-        payment = localizePayment(payment);
+        ReceiptPaymentResponse payment = repository.findReceiptPayment(checkoutId)
+                .map(this::localizePayment)
+                .orElseThrow(() -> new BusinessException(
+                        "RECEIPT_APPROVED_PAYMENT_REQUIRED",
+                        "O recibo exige um pagamento concluido."
+                ));
 
         validatePayment(checkout, payment);
 
-        return switch (checkout.operationType()) {
-            case "BAR_COMMAND" -> tabReceipt(
-                    checkout,
-                    payment
-            );
-            case "LAVA_WORK_ORDER" -> workOrderReceipt(
-                    checkout,
-                    payment
-            );
-            default -> throw new BusinessException(
+        if (!"BAR_COMMAND".equals(checkout.operationType())) {
+            throw new BusinessException(
                     "RECEIPT_OPERATION_NOT_SUPPORTED",
                     "Tipo de operacao nao suportado para recibo."
             );
-        };
+        }
+
+        return tabReceipt(checkout, payment);
     }
 
     private ReceiptResponse tabReceipt(
             CheckoutReceiptRow checkout,
             ReceiptPaymentResponse payment
     ) {
-        TabReceiptRow tab =
-                repository.findTab(checkout.id());
+        TabReceiptRow tab = repository.findTab(checkout.id());
 
         requireLink(
                 checkout,
@@ -112,13 +92,19 @@ public class ReceiptService {
                 tab.totalCents()
         );
 
-        List<ReceiptLineResponse> lines =
-                repository.findTabLines(tab.id());
-        validateLines(lines);
+        List<ReceiptLineResponse> lines = repository.findTabLines(tab.id());
+        if (lines.isEmpty()) {
+            throw new BusinessException(
+                    "RECEIPT_OPERATION_EMPTY",
+                    "A operacao nao possui linhas para recibo."
+            );
+        }
 
-        return response(
-                checkout,
-                payment,
+        return new ReceiptResponse(
+                "NON_FISCAL_THERMAL_80MM",
+                TITLE,
+                NOTICE,
+                establishment(),
                 new ReceiptOperationResponse(
                         checkout.operationType(),
                         tab.id(),
@@ -128,79 +114,6 @@ public class ReceiptService {
                         checkout.createdByUserId(),
                         checkout.createdByUserName()
                 ),
-                null,
-                null,
-                lines
-        );
-    }
-
-    private ReceiptResponse workOrderReceipt(
-            CheckoutReceiptRow checkout,
-            ReceiptPaymentResponse payment
-    ) {
-        WorkOrderReceiptRow workOrder =
-                repository.findWorkOrder(checkout.id());
-
-        requireLink(
-                checkout,
-                workOrder.id(),
-                workOrder.checkoutId(),
-                "LAVA_WORK_ORDER_CHECKOUT_LINK_INVALID"
-        );
-
-        if (!"PAID".equals(workOrder.status())
-                && !"COMPLETED".equals(workOrder.status())) {
-            throw new BusinessException(
-                    "LAVA_WORK_ORDER_NOT_PAID",
-                    "A ordem de servico ainda nao esta paga para recibo."
-            );
-        }
-
-        validateOperationAmounts(
-                checkout,
-                workOrder.subtotalCents(),
-                workOrder.discountCents(),
-                workOrder.totalCents()
-        );
-
-        List<ReceiptLineResponse> lines =
-                repository.findWorkOrderLines(workOrder.id());
-        validateLines(lines);
-
-        return response(
-                checkout,
-                payment,
-                new ReceiptOperationResponse(
-                        checkout.operationType(),
-                        workOrder.id(),
-                        checkout.id(),
-                        displayCustomer(workOrder.customerName()),
-                        workOrder.status(),
-                        checkout.createdByUserId(),
-                        checkout.createdByUserName()
-                ),
-                workOrder.customer(),
-                workOrder.vehicle(),
-                lines
-        );
-    }
-
-    private ReceiptResponse response(
-            CheckoutReceiptRow checkout,
-            ReceiptPaymentResponse payment,
-            ReceiptOperationResponse operation,
-            br.com.vitrine7.receipt.dto.ReceiptCustomerResponse customer,
-            br.com.vitrine7.receipt.dto.ReceiptVehicleResponse vehicle,
-            List<ReceiptLineResponse> lines
-    ) {
-        return new ReceiptResponse(
-                "NON_FISCAL_THERMAL_80MM",
-                TITLE,
-                NOTICE,
-                repository.findEstablishment(),
-                operation,
-                customer,
-                vehicle,
                 lines,
                 checkout.subtotalCents(),
                 checkout.discountCents(),
@@ -208,6 +121,33 @@ public class ReceiptService {
                 payment,
                 payment.approvedAt()
         );
+    }
+
+
+    private ReceiptEstablishmentResponse establishment() {
+        BusinessProperties.Establishment configured =
+                businessProperties.establishment();
+
+        if (configured == null
+                || configured.name() == null
+                || configured.name().isBlank()) {
+            throw new IllegalStateException(
+                    "APP_ESTABLISHMENT_NAME deve estar configurado."
+            );
+        }
+
+        return new ReceiptEstablishmentResponse(
+                configured.name().trim(),
+                blankToNull(configured.document()),
+                blankToNull(configured.phone()),
+                blankToNull(configured.address())
+        );
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank()
+                ? null
+                : value.trim();
     }
 
     private void validateCheckoutReady(CheckoutReceiptRow checkout) {
@@ -237,8 +177,7 @@ public class ReceiptService {
             );
         }
 
-        if (checkout.totalCents()
-                != payment.approvedAmountCents()) {
+        if (checkout.totalCents() != payment.approvedAmountCents()) {
             throw new BusinessException(
                     "RECEIPT_FINANCIAL_INTEGRITY_ERROR",
                     "O valor aprovado nao confere com o total do checkout."
@@ -278,30 +217,11 @@ public class ReceiptService {
         }
     }
 
-    private void validateLines(List<ReceiptLineResponse> lines) {
-        if (lines.isEmpty()) {
-            throw new BusinessException(
-                    "RECEIPT_OPERATION_EMPTY",
-                    "A operacao nao possui linhas para recibo."
-            );
-        }
-    }
-
-    private String displayCustomer(String customerName) {
-        if (customerName == null || customerName.isBlank()) {
-            return "Cliente avulso";
-        }
-
-        return customerName;
-    }
-
     private ZoneId timeZone() {
-        String configured = financeProperties.businessTimeZone();
-        if (configured == null || configured.isBlank()) {
-            return ZoneId.of("America/Bahia");
-        }
-
-        return ZoneId.of(configured);
+        String configured = businessProperties.businessTimeZone();
+        return configured == null || configured.isBlank()
+                ? ZoneId.of("America/Bahia")
+                : ZoneId.of(configured);
     }
 
     private ReceiptPaymentResponse localizePayment(
@@ -318,9 +238,7 @@ public class ReceiptService {
                 payment.status(),
                 payment.approvedAmountCents(),
                 payment.approvedAt()
-                        .atZoneSameInstant(
-                                timeZone()
-                        )
+                        .atZoneSameInstant(timeZone())
                         .toOffsetDateTime(),
                 payment.cashReceivedCents(),
                 payment.cashChangeCents(),
@@ -328,9 +246,7 @@ public class ReceiptService {
                 payment.reversedAt() == null
                         ? null
                         : payment.reversedAt()
-                                .atZoneSameInstant(
-                                        timeZone()
-                                )
+                                .atZoneSameInstant(timeZone())
                                 .toOffsetDateTime(),
                 payment.reversalReason()
         );

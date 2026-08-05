@@ -1,14 +1,9 @@
 import type {
-  SystemSettings,
-} from "../../../entities/settings";
-
-import type {
   SystemUser,
 } from "../../../entities/user";
 
 export type AdminDomainState = {
   users: SystemUser[];
-  settings: SystemSettings;
 };
 
 export type AdminDomainAction =
@@ -27,8 +22,4 @@ export type AdminDomainAction =
   | {
       type: "user/removed";
       payload: number;
-    }
-  | {
-      type: "settings/updated";
-      payload: SystemSettings;
     };

@@ -1,17 +1,22 @@
 import {
+  httpAdminRepository,
+} from "./http/httpAdminRepository";
+
+import {
   httpBarRepository,
 } from "./http/httpBarRepository";
 
 import {
-  httpLavaRepository,
-} from "./http/httpLavaRepository";
+  httpClientsRepository,
+} from "./http/httpClientsRepository";
 
 import {
-  httpAdminRepository,
-} from "./http/httpAdminRepository";
+  httpReportsRepository,
+} from "./http/httpReportsRepository";
 
 export const repositories = {
-  bar: httpBarRepository,
-  lava: httpLavaRepository,
   admin: httpAdminRepository,
+  bar: httpBarRepository,
+  clients: httpClientsRepository,
+  reports: httpReportsRepository,
 } as const;

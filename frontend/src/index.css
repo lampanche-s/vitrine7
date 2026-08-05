@@ -1052,36 +1052,6 @@ select:focus-visible {
   }
 }
 
-.admin-mode-sync-overlay {
-  animation: adminModeSyncOverlayIn var(--motion-standard) var(--motion-ease) both;
-}
-
-.admin-mode-sync-panel {
-  animation: adminModeSyncPanelIn var(--motion-standard) var(--motion-ease) both;
-}
-
-@keyframes adminModeSyncOverlayIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes adminModeSyncPanelIn {
-  from {
-    opacity: 0;
-    transform: translate3d(0, -8px, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
 .toast-viewport {
   pointer-events: none;
 }
@@ -1333,8 +1303,6 @@ select:focus-visible {
   .category-details-entry,
   .site-modal-backdrop,
   .site-modal-panel,
-  .admin-mode-sync-overlay,
-  .admin-mode-sync-panel,
   .app-toast,
   .app-toast[data-state="closing"],
   .center-light-divider,

@@ -14,7 +14,6 @@ export function adminDomainReducer(
     case "user/created":
       return {
         ...state,
-
         users: [
           action.payload,
           ...state.users,
@@ -24,7 +23,6 @@ export function adminDomainReducer(
     case "user/updated":
       return {
         ...state,
-
         users: state.users.map((user) =>
           user.id === action.payload.id
             ? action.payload
@@ -35,17 +33,10 @@ export function adminDomainReducer(
     case "user/removed":
       return {
         ...state,
-
         users: state.users.filter(
           (user) =>
             user.id !== action.payload
         ),
-      };
-
-    case "settings/updated":
-      return {
-        ...state,
-        settings: action.payload,
       };
 
     default:

@@ -1,3 +1,0 @@
-export {
-  LavaHistoryPanel,
-} from "./LavaHistoryPanel";

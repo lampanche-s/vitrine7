@@ -206,31 +206,6 @@ public class ReceiptHtmlRenderer {
             label(html, "Operador", receipt.operation().responsibleUserName());
         }
 
-        if (receipt.customer() != null) {
-            div(html, "line", "");
-            textLine(html, "div", "section-title", "Cliente");
-            label(html, "Cliente", receipt.customer().name());
-            if (receipt.customer().phone() != null) {
-                label(html, "Telefone", receipt.customer().phone());
-            }
-        }
-
-        if (receipt.vehicle() != null) {
-            if (receipt.customer() == null) {
-                div(html, "line", "");
-            }
-            textLine(html, "div", "section-title", "Veiculo");
-            if (receipt.vehicle().name() != null) {
-                label(html, "Veiculo", receipt.vehicle().name());
-            }
-            if (receipt.vehicle().plate() != null) {
-                label(html, "Placa", receipt.vehicle().plate());
-            }
-            if (receipt.vehicle().size() != null) {
-                label(html, "Porte", receipt.vehicle().size());
-            }
-        }
-
         div(html, "line", "");
         textLine(html, "div", "section-title", "Itens");
         for (ReceiptLineResponse line : receipt.lines()) {
@@ -299,11 +274,9 @@ public class ReceiptHtmlRenderer {
     }
 
     private String operationLabel(ReceiptResponse receipt) {
-        return switch (receipt.operation().type()) {
-            case "BAR_COMMAND" -> receipt.operation().displayName();
-            case "LAVA_WORK_ORDER" -> receipt.operation().displayName();
-            default -> receipt.operation().type();
-        };
+        return "BAR_COMMAND".equals(receipt.operation().type())
+                ? receipt.operation().displayName()
+                : receipt.operation().type();
     }
 
     private void label(

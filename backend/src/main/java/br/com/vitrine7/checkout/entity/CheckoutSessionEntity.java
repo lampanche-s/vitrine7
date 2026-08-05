@@ -167,13 +167,7 @@ public class CheckoutSessionEntity {
         checkout.requestFingerprint =
                 requestFingerprint;
         checkout.operationType = operationType;
-        checkout.businessArea =
-                switch (operationType) {
-                    case BAR_COMMAND ->
-                            CheckoutBusinessArea.BAR;
-                    case LAVA_WORK_ORDER ->
-                            CheckoutBusinessArea.LAVA;
-                };
+        checkout.businessArea = CheckoutBusinessArea.BAR;
         checkout.sourceId = null;
         checkout.status = CheckoutStatus.DRAFT;
         checkout.subtotalCents = 0L;

@@ -11,7 +11,6 @@ import {
 } from "../../components/ui";
 
 import type {
-  AdminAccessPanel,
   AppModuleId,
 } from "./access.types";
 
@@ -68,22 +67,6 @@ export function ModuleVisibility({
   } = useAccessControl();
 
   return canAccessModule(moduleId)
-    ? children
-    : null;
-}
-
-export function AdminPanelVisibility({
-  panel,
-  children,
-}: {
-  panel: AdminAccessPanel;
-  children: ReactNode;
-}) {
-  const {
-    canAccessAdminPanel,
-  } = useAccessControl();
-
-  return canAccessAdminPanel(panel)
     ? children
     : null;
 }

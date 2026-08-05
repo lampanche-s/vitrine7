@@ -1,15 +1,13 @@
-export type LavaClient = {
+export type Client = {
   id: number;
   name: string;
   phone: string;
   vehicle: string;
   plate: string;
-  lastService: string;
-  visits: number;
   active: boolean;
 };
 
-export type LavaClientInput = {
+export type ClientInput = {
   name: string;
   phone: string;
   vehicle: string;

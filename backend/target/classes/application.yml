@@ -21,6 +21,11 @@ app:
   name: Vitrine 7
   api-prefix: /api/v1
   business-time-zone: ${APP_BUSINESS_TIME_ZONE:America/Bahia}
+  establishment:
+    name: ${APP_ESTABLISHMENT_NAME:Vitrine 7}
+    document: ${APP_ESTABLISHMENT_DOCUMENT:}
+    phone: ${APP_ESTABLISHMENT_PHONE:}
+    address: ${APP_ESTABLISHMENT_ADDRESS:Rua Senhor do Bonfim, Monte Gordo, Camaçari/BA}
   payment-terminal:
     bridge:
       command-timeout: ${APP_PAYMENT_TERMINAL_BRIDGE_COMMAND_TIMEOUT:120s}

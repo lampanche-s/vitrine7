@@ -2,7 +2,7 @@ package br.com.vitrine7.payment.terminal.service;
 
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
-import br.com.vitrine7.finance.config.FinanceProperties;
+import br.com.vitrine7.common.config.BusinessProperties;
 import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentMethod;
 import br.com.vitrine7.payment.core.entity.PaymentProcessingMode;
@@ -40,7 +40,7 @@ public class TerminalPaymentReversalStartService {
 
     private final TerminalBridgeProperties bridgeProperties;
 
-    private final FinanceProperties financeProperties;
+    private final BusinessProperties businessProperties;
 
     private final Clock clock;
 
@@ -213,7 +213,7 @@ public class TerminalPaymentReversalStartService {
 
     private ZoneId businessTimeZone() {
         String configured =
-                financeProperties.businessTimeZone();
+                businessProperties.businessTimeZone();
 
         if (configured == null
                 || configured.isBlank()) {

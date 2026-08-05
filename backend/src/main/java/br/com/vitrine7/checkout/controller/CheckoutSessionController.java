@@ -27,7 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/checkouts")
 @RequiredArgsConstructor
 @PreAuthorize(
-        "hasAnyAuthority('lava:access', 'bar:access')"
+        "hasAuthority('bar:access')"
 )
 public class CheckoutSessionController {
 

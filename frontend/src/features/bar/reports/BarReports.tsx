@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -11,14 +10,8 @@ import {
 } from "../../../components/ui";
 
 import type {
-  BarSaleHistoryEntry,
-} from "../../../entities/sale-history";
-
-import type {
-  BarHistoryPageRequest,
-  BarHistoryPageResult,
-  LavaHistoryPageRequest,
-  LavaHistoryPageResult,
+  ReportsRepository,
+  SalesReport,
 } from "../../../data/contracts";
 
 import {
@@ -29,175 +22,76 @@ import {
   UnifiedReportExportActions,
 } from "../../reports/UnifiedReportExportActions";
 
-import {
-  getLatestRows,
-} from "./barReports.selectors";
-
-type BarReportsProps = {
-  onLoadHistory: (
-    input: BarHistoryPageRequest
-  ) => Promise<BarHistoryPageResult | null>;
-  onLoadLavaHistory: (
-    input: LavaHistoryPageRequest
-  ) => Promise<LavaHistoryPageResult | null>;
-};
-
-type ReportListRow = {
-  label: string;
-  value: string;
-};
-
-const BAR_REPORT_PAGE_SIZE = 100;
+function paymentLabel(method: string) {
+  switch (method) {
+    case "CASH":
+      return "Dinheiro";
+    case "PIX":
+      return "Pix";
+    case "CREDIT_CARD":
+      return "Crédito";
+    case "DEBIT_CARD":
+      return "Débito";
+    default:
+      return method || "Não informado";
+  }
+}
 
 function formatQuantity(value: number) {
   return String(value).padStart(2, "0");
 }
 
-function getPaymentRows(
-  entries: BarSaleHistoryEntry[]
-): ReportListRow[] {
-  const totals = entries.reduce<
-    Record<string, number>
-  >((accumulator, entry) => {
-    accumulator[entry.method] =
-      (accumulator[entry.method] ?? 0) +
-      entry.amount;
-    return accumulator;
-  }, {});
-
-  return Object.entries(totals)
-    .sort(
-      ([, firstAmount], [, secondAmount]) =>
-        secondAmount - firstAmount
-    )
-    .map(([label, amount]) => ({
-      label,
-      value: formatBrlCurrency(amount),
-    }));
-}
-
-function ReportRows({
-  rows,
-}: {
-  rows: ReportListRow[];
-}) {
-  if (rows.length === 0) {
-    return (
-      <p className="py-3 text-sm text-[var(--text-subtle)]">
-        Nenhuma venda concluída.
-      </p>
-    );
-  }
-
-  return (
-    <div>
-      {rows.map((row) => (
-        <div
-          key={row.label}
-          className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-2.5 last:border-b-0"
-        >
-          <p className="truncate text-sm font-medium text-[var(--text-base)]">
-            {row.label}
-          </p>
-          <p className="shrink-0 text-sm text-[var(--text-muted)]">
-            {row.value}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 export function BarReports({
-  onLoadHistory,
-  onLoadLavaHistory,
-}: BarReportsProps) {
-  const [entries, setEntries] =
-    useState<BarSaleHistoryEntry[]>([]);
-  const [historyLoadFailed, setHistoryLoadFailed] =
-    useState(false);
+  repository,
+}: {
+  repository: ReportsRepository;
+}) {
+  const [report, setReport] = useState<SalesReport | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    let isCurrent = true;
+    let current = true;
 
-    async function loadReportHistory() {
-      setHistoryLoadFailed(false);
-      const firstPage = await onLoadHistory({
-        page: 0,
-        size: BAR_REPORT_PAGE_SIZE,
-      });
+    async function load() {
+      setLoadError("");
 
-      if (!isCurrent) {
-        return;
-      }
-
-      if (!firstPage) {
-        setEntries([]);
-        setHistoryLoadFailed(true);
-        return;
-      }
-
-      const allEntries = [...firstPage.entries];
-
-      for (
-        let page = 1;
-        page < firstPage.totalPages;
-        page += 1
-      ) {
-        const currentPage = await onLoadHistory({
-          page,
-          size: BAR_REPORT_PAGE_SIZE,
-        });
-
-        if (!isCurrent) {
-          return;
+      try {
+        const response = await repository.summary({ scope: "ALL" });
+        if (current) {
+          setReport(response);
         }
-
-        if (!currentPage) {
-          setEntries([]);
-          setHistoryLoadFailed(true);
-          return;
+      } catch (error) {
+        if (current) {
+          setReport(null);
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar o relatório."
+          );
         }
-
-        allEntries.push(...currentPage.entries);
       }
-
-      setEntries(allEntries);
     }
 
-    void loadReportHistory();
+    void load();
     return () => {
-      isCurrent = false;
+      current = false;
     };
-  }, [onLoadHistory]);
-
-  const reportData = useMemo(() => {
-    const totalReceived = entries.reduce(
-      (total, entry) => total + entry.amount,
-      0
-    );
-    const averageTicket = entries.length > 0
-      ? totalReceived / entries.length
-      : 0;
-
-    return {
-      totalReceived,
-      averageTicket,
-      paymentRows: getPaymentRows(entries),
-      latestRows: getLatestRows(entries),
-    };
-  }, [entries]);
+  }, [repository]);
 
   return (
     <ContentStack>
-      <UnifiedReportExportActions
-        onLoadBarHistory={onLoadHistory}
-        onLoadLavaHistory={onLoadLavaHistory}
-      />
+      <UnifiedReportExportActions repository={repository} />
 
-      {historyLoadFailed ? (
-        <p className="text-sm text-[var(--color-danger)]">
-          Não foi possível carregar os dados completos do relatório.
+      {loadError ? (
+        <p className="text-sm text-[var(--color-danger)]" role="alert">
+          {loadError}
         </p>
       ) : null}
 
@@ -208,23 +102,25 @@ export function BarReports({
               Total recebido
             </p>
             <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
-              {formatBrlCurrency(reportData.totalReceived)}
+              {formatBrlCurrency((report?.totalReceivedCents ?? 0) / 100)}
             </p>
           </div>
+
           <div className="border-r border-[var(--border-subtle)] pr-4 last:border-r-0">
             <p className="text-[11px] font-medium uppercase text-[var(--text-subtle)]">
               Comandas concluídas
             </p>
             <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
-              {formatQuantity(entries.length)}
+              {formatQuantity(report?.operationCount ?? 0)}
             </p>
           </div>
+
           <div className="pr-4">
             <p className="text-[11px] font-medium uppercase text-[var(--text-subtle)]">
               Ticket médio
             </p>
             <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
-              {formatBrlCurrency(reportData.averageTicket)}
+              {formatBrlCurrency((report?.averageTicketCents ?? 0) / 100)}
             </p>
           </div>
         </div>
@@ -236,8 +132,27 @@ export function BarReports({
             <div className="v7-card-header">
               <SectionTitle compact title="Formas de pagamento" />
             </div>
+
             <div className="v7-list-scroll premium-scroll pr-1">
-              <ReportRows rows={reportData.paymentRows} />
+              {(report?.byPaymentMethod.length ?? 0) === 0 ? (
+                <p className="py-3 text-sm text-[var(--text-subtle)]">
+                  Nenhuma venda concluída.
+                </p>
+              ) : null}
+
+              {report?.byPaymentMethod.map((entry) => (
+                <div
+                  key={entry.method}
+                  className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] py-2.5 last:border-b-0"
+                >
+                  <p className="truncate text-sm font-medium text-[var(--text-base)]">
+                    {paymentLabel(entry.method)}
+                  </p>
+                  <p className="shrink-0 text-sm text-[var(--text-muted)]">
+                    {formatBrlCurrency(entry.amountCents / 100)}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </PremiumCard>
@@ -247,31 +162,32 @@ export function BarReports({
             <div className="v7-card-header flex items-center justify-between gap-4">
               <SectionTitle compact title="Últimos registros" />
               <p className="text-sm text-[var(--text-subtle)]">
-                {reportData.latestRows.length} registro(s)
+                {report?.latestOperations.length ?? 0} registro(s)
               </p>
             </div>
+
             <div className="v7-list-scroll premium-scroll pr-1">
-              {reportData.latestRows.length === 0 ? (
+              {(report?.latestOperations.length ?? 0) === 0 ? (
                 <p className="py-3 text-sm text-[var(--text-subtle)]">
                   Nenhuma venda concluída.
                 </p>
               ) : null}
 
-              {reportData.latestRows.map((entry) => (
+              {report?.latestOperations.map((operation) => (
                 <div
-                  key={entry.id}
+                  key={operation.operationId}
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--border-subtle)] py-3 last:border-b-0"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--text-base)]">
-                      {entry.origin}
+                      {operation.displayName}
                     </p>
                     <p className="mt-1 truncate text-xs text-[var(--text-subtle)]">
-                      {entry.method} · {entry.document}
+                      {paymentLabel(operation.paymentMethod)} · {formatDateTime(operation.completedAt)}
                     </p>
                   </div>
                   <p className="text-sm font-medium text-[var(--text-muted)]">
-                    {formatBrlCurrency(entry.amount)}
+                    {formatBrlCurrency(operation.netCents / 100)}
                   </p>
                 </div>
               ))}

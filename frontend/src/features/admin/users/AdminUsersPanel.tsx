@@ -44,16 +44,14 @@ const emptySystemUserForm: SystemUserInput = {
   username: "",
   password: "",
   role: "Operador",
-  status: "Ativo",
 };
 
 function getSystemUserForm(user: SystemUser): SystemUserInput {
   return {
     name: user.name,
     username: user.username,
-    password: user.password,
+    password: "",
     role: user.role,
-    status: user.status,
   };
 }
 
@@ -171,12 +169,6 @@ export function AdminUsersPanel({
 
     setForm((current) => {
       switch (field) {
-        case "status":
-          return {
-            ...current,
-            status: value as SystemUserStatus,
-          };
-
         case "role":
           return {
             ...current,
@@ -324,10 +316,7 @@ export function AdminUsersPanel({
     }
 
     const created =
-      await onCreate({
-        ...normalizedForm,
-        status: "Ativo",
-      });
+      await onCreate(normalizedForm);
 
     if (!created) {
       setFormError(
@@ -433,11 +422,6 @@ export function AdminUsersPanel({
       return;
     }
 
-
-    setForm((current) => ({
-      ...current,
-      status: nextStatus,
-    }));
 
     showToast({
       title:
@@ -903,7 +887,6 @@ function UserFormModal({
           form={form}
           onUpdateForm={onUpdateForm}
           showPassword={showPassword}
-          showStatus={false}
           availableRoles={availableRoles}
         />
 
@@ -935,7 +918,6 @@ function UserFormFields({
   form,
   onUpdateForm,
   showPassword = true,
-  showStatus = true,
   availableRoles,
 }: {
   form: SystemUserInput;
@@ -944,7 +926,6 @@ function UserFormFields({
     value: string
   ) => void;
   showPassword?: boolean;
-  showStatus?: boolean;
   availableRoles: SystemUserRole[];
 }) {
   return (
@@ -985,22 +966,6 @@ function UserFormFields({
         }
       />
 
-      {showStatus ? (
-        <AdminSelect
-          label="Status"
-          value={form.status}
-          options={[
-            "Ativo",
-            "Bloqueado",
-          ]}
-          onChange={(value) =>
-            onUpdateForm(
-              "status",
-              value
-            )
-          }
-        />
-      ) : null}
     </div>
   );
 }
@@ -1019,4 +984,3 @@ function FormErrorMessage({
     </div>
   );
 }
-

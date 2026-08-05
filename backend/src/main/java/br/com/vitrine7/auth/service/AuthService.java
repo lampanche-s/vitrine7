@@ -8,7 +8,6 @@ import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.system.user.entity.UserEntity;
 import br.com.vitrine7.system.user.repository.UserRepository;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
-import br.com.vitrine7.system.preference.repository.UserPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
@@ -27,7 +26,6 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
-    private final UserPreferenceRepository userPreferenceRepository;
     private final JwtService jwtService;
     private final AuthSessionService authSessionService;
 
@@ -61,11 +59,6 @@ public class AuthService {
 
         user.setLastLoginAt(OffsetDateTime.now());
 
-        userPreferenceRepository.findById(user.getId())
-                .ifPresent(preference ->
-                        preference.setAdminModeEnabled(false)
-                );
-
         JwtService.GeneratedToken token =
                 jwtService.generate(principal);
 
@@ -81,20 +74,6 @@ public class AuthService {
                 token.expiresAt(),
                 CurrentUserResponse.from(principal)
         );
-    }
-
-    private String normalizeLoginIdentifier(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-
-        String normalized = value
-                .trim()
-                .toLowerCase(java.util.Locale.ROOT);
-
-        return normalized.length() <= 120
-                ? normalized
-                : normalized.substring(0, 120);
     }
 
     public record LoginResult(

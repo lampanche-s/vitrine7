@@ -2,7 +2,6 @@ package br.com.vitrine7.system.user.dto;
 
 import br.com.vitrine7.common.security.PasswordPolicy;
 import br.com.vitrine7.system.user.entity.UserRole;
-import br.com.vitrine7.system.user.entity.UserStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,9 +20,6 @@ public record CreateUserRequest(
         String password,
 
         @NotNull(message = "Informe o perfil do usuário.")
-        UserRole role,
-
-        @NotNull(message = "Informe o status do usuário.")
-        UserStatus status
+        UserRole role
 ) {
 }

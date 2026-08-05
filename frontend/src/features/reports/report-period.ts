@@ -1,6 +1,6 @@
 export type ReportScope =
-  | "bar"
-  | "lava";
+  | "ITEM"
+  | "SERVICE";
 
 export type ReportPeriodPreset =
   | "previousDay"

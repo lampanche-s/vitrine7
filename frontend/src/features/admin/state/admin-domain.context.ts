@@ -3,10 +3,6 @@ import {
 } from "react";
 
 import type {
-  SystemSettings,
-} from "../../../entities/settings";
-
-import type {
   SystemUserInput,
   SystemUserStatus,
 } from "../../../entities/user";
@@ -45,10 +41,6 @@ export type AdminDomainContextValue = {
 
   removeUser: (
     userId: number
-  ) => Promise<boolean>;
-
-  saveSettings: (
-    settings: SystemSettings
   ) => Promise<boolean>;
 };
 

@@ -1,3 +1,0 @@
-export {
-  LavaServicesManager,
-} from "./LavaServicesManager";

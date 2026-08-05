@@ -7,11 +7,11 @@ export const mockCurrentSession: AppSession = {
   displayName: "Administrador",
   role: "ADMINISTRADOR",
   permissions: [
-    "lava:access",
+    "clients:manage",
+    "reports:access",
     "bar:access",
     "payment:reverse",
     "admin:users",
-    "admin:settings",
     "admin:payment-config",
   ],
 };

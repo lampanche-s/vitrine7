@@ -107,6 +107,32 @@ class AuthSessionServiceTest {
     }
 
     @Test
+    void rejectsSessionWhoseDatabaseExpirationWasReached() {
+        UUID sessionId = UUID.randomUUID();
+        AuthSessionEntity session = AuthSessionEntity.create(
+                sessionId,
+                7L,
+                NOW.minus(Duration.ofMinutes(30)),
+                NOW
+        );
+
+        when(repository.findById(sessionId))
+                .thenReturn(Optional.of(session));
+
+        assertFalse(service.validateAndTouch(
+                jwt(sessionId, 7L),
+                request(true)
+        ));
+
+        verify(repository, never()).touchIfOlderThan(
+                sessionId,
+                NOW,
+                NOW.plus(Duration.ofHours(5)),
+                NOW.minus(Duration.ofMinutes(5))
+        );
+    }
+
+    @Test
     void silentRequestDoesNotTouchSession() {
         UUID sessionId = UUID.randomUUID();
         AuthSessionEntity session = AuthSessionEntity.create(
@@ -132,11 +158,32 @@ class AuthSessionServiceTest {
         );
     }
 
+    @Test
+    void logoutRevokesSessionExposedByAuthenticationFilter() {
+        UUID sessionId = UUID.randomUUID();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+
+        when(request.getAttribute(
+                AuthSessionService.CURRENT_SESSION_ID_ATTRIBUTE
+        )).thenReturn(sessionId);
+
+        service.revokeCurrentSession(request);
+
+        verify(repository).revoke(sessionId, NOW);
+    }
+
+    @Test
+    void securityChangeRevokesEveryOpenSessionForUser() {
+        service.revokeAllForUser(7L);
+
+        verify(repository).revokeAllByUserId(7L, NOW);
+    }
+
     private Jwt jwt(UUID sessionId, long userId) {
         return new Jwt(
                 "token",
                 NOW.minusSeconds(60),
-                NOW.plusSeconds(60),
+                NOW.plus(Duration.ofHours(8)),
                 Map.of("alg", "none"),
                 Map.of(
                         "iss", "issuer",

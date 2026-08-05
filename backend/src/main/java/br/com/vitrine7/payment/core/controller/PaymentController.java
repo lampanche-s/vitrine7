@@ -27,7 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @PreAuthorize(
-        "hasAnyAuthority('lava:access', 'bar:access')"
+        "hasAuthority('bar:access')"
 )
 public class PaymentController {
 

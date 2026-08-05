@@ -4,7 +4,6 @@ import {
 } from "react";
 
 import {
-  canAccessAdminPanel as checkAdminPanelAccess,
   canAccessSystemModule,
   hasAppPermission,
 } from "./access.rules";
@@ -14,7 +13,6 @@ import {
 } from "./access.context";
 
 import type {
-  AdminAccessPanel,
   AppModuleId,
   AppPermission,
   AppSession,
@@ -48,15 +46,6 @@ export function AccessProvider({
         return canAccessSystemModule(
           session,
           moduleId
-        );
-      },
-
-      canAccessAdminPanel(
-        panel: AdminAccessPanel
-      ) {
-        return checkAdminPanelAccess(
-          session,
-          panel
         );
       },
     }),

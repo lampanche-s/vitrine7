@@ -86,7 +86,7 @@ class PaymentServiceTest {
                 CheckoutSessionEntity.openDraft(
                         UUID.fromString("33333333-3333-4333-8333-333333333333"),
                         "fingerprint",
-                        CheckoutOperationType.LAVA_WORK_ORDER,
+                        CheckoutOperationType.BAR_COMMAND,
                         7L,
                         now.plusMinutes(30)
                 );

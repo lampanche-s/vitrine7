@@ -15,10 +15,6 @@ import {
 } from "../../../components/ui";
 
 import type {
-  SystemSettings,
-} from "../../../entities/settings";
-
-import type {
   SystemUserInput,
   SystemUserStatus,
 } from "../../../entities/user";
@@ -95,7 +91,6 @@ export function AdminDomainProvider({
 
         payload: {
           users: snapshot.users,
-          settings: snapshot.settings,
         },
       });
     } catch (currentError) {
@@ -251,34 +246,6 @@ export function AdminDomainProvider({
     );
   }
 
-  async function saveSettings(
-    settings: SystemSettings
-  ): Promise<boolean> {
-    setError(null);
-
-    try {
-      const updatedSettings =
-        await repository.saveSettings(settings);
-
-      dispatch({
-        type: "settings/updated",
-        payload: updatedSettings,
-      });
-
-      return true;
-    } catch (currentError) {
-      const message =
-        getErrorMessage(currentError);
-
-      setError(message);
-      showErrorToast(currentError, {
-        title: "Não foi possível salvar as configurações",
-        dedupeKey: `admin-settings|${message}`,
-      });
-      return false;
-    }
-  }
-
   return (
     <AdminDomainContext.Provider
       value={{
@@ -293,8 +260,6 @@ export function AdminDomainProvider({
         setUserStatus,
         resetUserPassword,
         removeUser,
-
-        saveSettings,
       }}
     >
       {children}

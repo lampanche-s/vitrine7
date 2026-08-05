@@ -1,5 +1,4 @@
 import type {
-  AdminAccessPanel,
   AppModuleId,
   AppPermission,
   AppSession,
@@ -9,8 +8,9 @@ const modulePermissionMap: Record<
   AppModuleId,
   AppPermission
 > = {
-  lava: "lava:access",
   bar: "bar:access",
+  clients: "clients:manage",
+  reports: "reports:access",
   users: "admin:users",
 };
 
@@ -30,22 +30,5 @@ export function canAccessSystemModule(
   return hasAppPermission(
     session,
     modulePermissionMap[moduleId]
-  );
-}
-
-export function canAccessAdminPanel(
-  session: AppSession,
-  panel: AdminAccessPanel
-): boolean {
-  if (panel === "users") {
-    return hasAppPermission(
-      session,
-      "admin:users"
-    );
-  }
-
-  return hasAppPermission(
-    session,
-    "admin:settings"
   );
 }

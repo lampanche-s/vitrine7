@@ -1,10 +1,6 @@
 import type { ElementType } from "react";
 
 export type TabId =
-  | "lava-service"
-  | "lava-history"
-  | "lava-clients"
-  | "lava-reports"
   | "bar-order"
   | "bar-menu"
   | "bar-finance"

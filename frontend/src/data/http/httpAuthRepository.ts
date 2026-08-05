@@ -15,11 +15,12 @@ export const ACCOUNT_BLOCKED_LOGIN_MESSAGE =
   "Acesso bloqueado. Entre em contato pelo telefone (71) 98716-0075 ou pelo e-mail jorge.lampanche@hotmail.com.";
 
 const appPermissions = new Set<string>([
-  "lava:access",
   "bar:access",
+  "bar:manage-catalog",
+  "clients:manage",
+  "reports:access",
   "payment:reverse",
   "admin:users",
-  "admin:settings",
   "admin:payment-config",
 ]);
 

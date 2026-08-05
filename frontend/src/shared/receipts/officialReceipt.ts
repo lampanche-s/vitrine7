@@ -26,7 +26,6 @@ export type OfficialReceiptResponse = {
   operation: {
     type:
       | "BAR_COMMAND"
-      | "LAVA_WORK_ORDER"
       | string;
     operationId: number;
     checkoutId: string;
@@ -35,17 +34,6 @@ export type OfficialReceiptResponse = {
     responsibleUserId: number | null;
     responsibleUserName: string | null;
   };
-
-  customer: {
-    name: string | null;
-    phone: string | null;
-  } | null;
-
-  vehicle: {
-    name: string | null;
-    plate: string | null;
-    size: string | null;
-  } | null;
 
   lines: {
     description: string;
@@ -101,9 +89,6 @@ function operationLabel(type: string): string {
   switch (type) {
     case "BAR_COMMAND":
       return "Comanda";
-
-    case "LAVA_WORK_ORDER":
-      return "Ordem de serviço";
 
     default:
       return type;
@@ -194,15 +179,6 @@ export function mapOfficialReceipt(
       response.operation.responsibleUserName
     ),
 
-    ...optionalLine("Cliente", response.customer?.name),
-
-    ...optionalLine("Telefone", response.customer?.phone),
-
-    ...optionalLine("Veículo", response.vehicle?.name),
-
-    ...optionalLine("Placa", response.vehicle?.plate),
-
-    ...optionalLine("Porte", response.vehicle?.size),
 
     ...paymentReversalLines(
       response.payment

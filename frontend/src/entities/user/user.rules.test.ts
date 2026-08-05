@@ -9,8 +9,6 @@ import {
   PASSWORD_POLICY_MESSAGE,
   isPasswordAccepted,
   normalizeSystemUserInput,
-  resetSystemUserPassword,
-  updateSystemUser,
 } from "./user.rules";
 
 describe("user rules", () => {
@@ -20,7 +18,6 @@ describe("user rules", () => {
       username: " João @ Caixa #1 ",
       password: " 123456 ",
       role: "Operador",
-      status: "Ativo",
     });
 
     expect(input.name).toBe("Operador");
@@ -49,49 +46,5 @@ describe("user rules", () => {
 
   it("recusa senha com 5 caracteres", () => {
     expect(isPasswordAccepted("12345")).toBe(false);
-  });
-
-  it("preserva a senha ao editar usuário sem nova senha", () => {
-    const [updatedUser] = updateSystemUser(
-      [
-        {
-          id: 1,
-          name: "Operador",
-          username: "operador",
-          password: "abcdef",
-          role: "Operador",
-          status: "Ativo",
-        },
-      ],
-      1,
-      {
-        name: "Operador Novo",
-        username: "operador",
-        password: "",
-        role: "Operador",
-        status: "Ativo",
-      }
-    );
-
-    expect(updatedUser.password).toBe("abcdef");
-  });
-
-  it("redefine senha para seis caracteres", () => {
-    const [updatedUser] = resetSystemUserPassword(
-      [
-        {
-          id: 1,
-          name: "Operador",
-          username: "operador",
-          password: "senha-antiga",
-          role: "Operador",
-          status: "Ativo",
-        },
-      ],
-      1,
-      "abcdef"
-    );
-
-    expect(updatedUser.password).toBe("abcdef");
   });
 });

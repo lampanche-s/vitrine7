@@ -1,7 +1,6 @@
 package br.com.vitrine7.system.user.dto;
 
 import br.com.vitrine7.system.user.entity.UserRole;
-import br.com.vitrine7.system.user.entity.UserStatus;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
@@ -53,8 +52,7 @@ class UserValidationTest {
                 "Operador",
                 "operador",
                 password,
-                UserRole.OPERADOR,
-                UserStatus.ATIVO
+                UserRole.OPERADOR
         );
 
         assertTrue(validator.validate(request).isEmpty());
@@ -66,8 +64,7 @@ class UserValidationTest {
                 "Operador",
                 "operador",
                 "12345",
-                UserRole.OPERADOR,
-                UserStatus.ATIVO
+                UserRole.OPERADOR
         );
 
         assertEquals(
@@ -90,8 +87,7 @@ class UserValidationTest {
                 "Operador",
                 username,
                 "abc123",
-                UserRole.OPERADOR,
-                UserStatus.ATIVO
+                UserRole.OPERADOR
         );
     }
 }

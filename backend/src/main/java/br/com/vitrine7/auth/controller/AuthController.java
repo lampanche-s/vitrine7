@@ -6,7 +6,9 @@ import br.com.vitrine7.auth.dto.LoginRequest;
 import br.com.vitrine7.auth.dto.LoginResponse;
 import br.com.vitrine7.auth.service.AuthCookieService;
 import br.com.vitrine7.auth.service.AuthService;
+import br.com.vitrine7.auth.service.AuthSessionService;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthCookieService authCookieService;
+    private final AuthSessionService authSessionService;
 
     @GetMapping("/csrf")
     public CsrfResponse csrf(CsrfToken csrfToken) {
@@ -65,11 +68,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            HttpServletResponse response,
-            @AuthenticationPrincipal VitrineUserPrincipal principal
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
+        authSessionService.revokeCurrentSession(request);
         authCookieService.clearAuthenticationCookie(response);
-
 
         return ResponseEntity.noContent().build();
     }

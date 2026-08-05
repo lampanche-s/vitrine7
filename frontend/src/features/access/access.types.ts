@@ -1,14 +1,16 @@
 export type AppPermission =
-  | "lava:access"
   | "bar:access"
+  | "bar:manage-catalog"
+  | "clients:manage"
+  | "reports:access"
   | "payment:reverse"
   | "admin:users"
-  | "admin:settings"
   | "admin:payment-config";
 
 export type AppModuleId =
-  | "lava"
   | "bar"
+  | "clients"
+  | "reports"
   | "users";
 
 export type AppUserRole =
@@ -22,7 +24,3 @@ export type AppSession = {
   role: AppUserRole;
   permissions: AppPermission[];
 };
-
-export type AdminAccessPanel =
-  | "users"
-  | "settings";

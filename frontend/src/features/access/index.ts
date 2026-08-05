@@ -1,5 +1,4 @@
 export type {
-  AdminAccessPanel,
   AppModuleId,
   AppPermission,
   AppSession,
@@ -11,7 +10,6 @@ export {
 } from "./AccessProvider";
 
 export {
-  AdminPanelVisibility,
   ModuleAccessGuard,
   ModuleVisibility,
 } from "./AccessGuard";

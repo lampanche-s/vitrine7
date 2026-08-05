@@ -3,7 +3,6 @@ import {
 } from "react";
 
 import type {
-  AdminAccessPanel,
   AppModuleId,
   AppPermission,
   AppSession,
@@ -18,10 +17,6 @@ export type AccessContextValue = {
 
   canAccessModule: (
     moduleId: AppModuleId
-  ) => boolean;
-
-  canAccessAdminPanel: (
-    panel: AdminAccessPanel
   ) => boolean;
 };
 

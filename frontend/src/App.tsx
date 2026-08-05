@@ -31,7 +31,7 @@ import {
 } from "./features/access";
 import { BarContent } from "./features/bar/BarContent";
 import { Header } from "./features/layout/Header";
-import { LavaContent } from "./features/lava/LavaContent";
+import { ClientsContent } from "./features/clients";
 import { LoginScreen } from "./features/login/LoginScreen";
 import {
   AUTH_SESSION_EXPIRED_EVENT,
@@ -52,8 +52,7 @@ type AppSection =
   | "catalog"
   | "clients"
   | "reports"
-  | "users"
-  | "settings";
+  | "users";
 
 type NavigationItem = {
   id: AppSection;
@@ -102,7 +101,7 @@ const navigationItems: NavigationItem[] = [
 const barTabBySection: Record<
   Exclude<
     AppSection,
-    "clients" | "users" | "settings"
+    "clients" | "users"
   >,
   TabId
 > = {
@@ -111,19 +110,6 @@ const barTabBySection: Record<
   catalog: "bar-menu",
   reports: "bar-reports",
 };
-
-function clearStoredAdminMode(
-  userId: number
-): void {
-  try {
-    window.localStorage.setItem(
-      `vitrine7:admin-mode:${userId}`,
-      "false"
-    );
-  } catch {
-    // O backend continua sendo a fonte da sessão.
-  }
-}
 
 function AppContent({
   onLogout,
@@ -139,7 +125,7 @@ function AppContent({
   ] = useState(true);
 
   const {
-    canAccessAdminPanel,
+    can,
     session,
   } = useAccessControl();
 
@@ -147,7 +133,7 @@ function AppContent({
     session.role !== "OPERADOR";
 
   const canOpenUsers =
-    canAccessAdminPanel("users");
+    can("admin:users");
 
   const activeNavigation =
     activeSection;
@@ -170,26 +156,10 @@ function AppContent({
   function renderActiveContent() {
     switch (activeSection) {
       case "clients":
-        return (
-          <LavaContent
-            activeTab="lava-clients"
-            adminModeActive
-          />
-        );
+        return <ClientsContent />;
 
       case "users":
-        return (
-          <AdminPanel
-            activePanel="users"
-          />
-        );
-
-      case "settings":
-        return (
-          <AdminPanel
-            activePanel="settings"
-          />
-        );
+        return <AdminPanel />;
 
       default:
         return (
@@ -454,9 +424,6 @@ export default function App() {
         password,
       });
 
-    clearStoredAdminMode(
-      currentSession.userId
-    );
     setSession(currentSession);
     setAuthStatus("authenticated");
   }

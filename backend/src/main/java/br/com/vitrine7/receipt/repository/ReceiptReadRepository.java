@@ -1,11 +1,8 @@
 package br.com.vitrine7.receipt.repository;
 
 import br.com.vitrine7.common.exception.NotFoundException;
-import br.com.vitrine7.receipt.dto.ReceiptCustomerResponse;
-import br.com.vitrine7.receipt.dto.ReceiptEstablishmentResponse;
 import br.com.vitrine7.receipt.dto.ReceiptLineResponse;
 import br.com.vitrine7.receipt.dto.ReceiptPaymentResponse;
-import br.com.vitrine7.receipt.dto.ReceiptVehicleResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -29,19 +26,19 @@ public class ReceiptReadRepository {
         return jdbcTemplate.query(
                         """
                                 SELECT
-                                    cs.id,
-                                    cs.operation_type,
-                                    cs.source_id,
-                                    cs.status,
-                                    cs.subtotal_cents,
-                                    cs.discount_cents,
-                                    cs.total_cents,
-                                    cs.created_by_user_id,
+                                    checkout.id,
+                                    checkout.operation_type,
+                                    checkout.source_id,
+                                    checkout.status,
+                                    checkout.subtotal_cents,
+                                    checkout.discount_cents,
+                                    checkout.total_cents,
+                                    checkout.created_by_user_id,
                                     creator.name AS created_by_user_name
-                                FROM checkout_sessions cs
+                                FROM checkout_sessions checkout
                                 LEFT JOIN users creator
-                                    ON creator.id = cs.created_by_user_id
-                                WHERE cs.id = :checkoutId
+                                    ON creator.id = checkout.created_by_user_id
+                                WHERE checkout.id = :checkoutId
                                 """,
                         params(checkoutId),
                         new CheckoutReceiptRowMapper()
@@ -69,91 +66,58 @@ public class ReceiptReadRepository {
                 params(checkoutId),
                 Number.class
         );
-
         return count == null ? 0L : count.longValue();
     }
 
-    public Optional<ReceiptPaymentResponse> findReceiptPayment(
-            UUID checkoutId,
-            String timeZone
-    ) {
+    public Optional<ReceiptPaymentResponse> findReceiptPayment(UUID checkoutId) {
         return jdbcTemplate.query(
                         """
                                 SELECT
-                                    p.id,
-                                    CASE p.method
+                                    payment.id,
+                                    CASE payment.method
                                         WHEN 'CASH' THEN 'CASH'
                                         WHEN 'PIX' THEN 'PIX'
                                         WHEN 'CREDIT_CARD' THEN 'CREDIT'
                                         WHEN 'DEBIT_CARD' THEN 'DEBIT'
                                     END AS method,
-                                    p.processing_mode,
-                                    p.status,
-                                    p.amount_cents,
-                                    p.approved_at,
-                                    p.cash_received_cents,
-                                    p.cash_change_cents,
+                                    payment.processing_mode,
+                                    payment.status,
+                                    payment.amount_cents,
+                                    payment.approved_at,
+                                    payment.cash_received_cents,
+                                    payment.cash_change_cents,
                                     terminal.provider,
-                                    p.reversed_at,
-                                    p.reversal_reason
-                                FROM payments p
+                                    payment.reversed_at,
+                                    payment.reversal_reason
+                                FROM payments payment
                                 LEFT JOIN payment_terminal_transactions terminal
-                                    ON terminal.payment_id = p.id
+                                    ON terminal.payment_id = payment.id
                                    AND terminal.status = 'APPROVED'
-                                WHERE p.checkout_session_id = :checkoutId
-                                  AND p.status IN (
+                                WHERE payment.checkout_session_id = :checkoutId
+                                  AND payment.status IN (
                                       'APPROVED',
                                       'REVERSAL_PENDING',
                                       'REVERSED'
                                   )
-                                ORDER BY p.approved_at ASC, p.id ASC
+                                ORDER BY payment.approved_at ASC, payment.id ASC
                                 """,
-                        params(checkoutId).addValue("timeZone", timeZone),
-                        (rs, rowNum) -> new ReceiptPaymentResponse(
-                                rs.getObject("id", UUID.class),
-                                rs.getString("method"),
-                                rs.getString("processing_mode"),
-                                rs.getString("status"),
-                                rs.getLong("amount_cents"),
-                                rs.getObject(
-                                        "approved_at",
-                                        OffsetDateTime.class
-                                ),
-                                nullableLong(
-                                        rs,
-                                        "cash_received_cents"
-                                ),
-                                nullableLong(
-                                        rs,
-                                        "cash_change_cents"
-                                ),
-                                rs.getString("provider"),
-                                rs.getObject(
-                                        "reversed_at",
-                                        OffsetDateTime.class
-                                ),
-                                rs.getString("reversal_reason")
+                        params(checkoutId),
+                        (resultSet, rowNumber) -> new ReceiptPaymentResponse(
+                                resultSet.getObject("id", UUID.class),
+                                resultSet.getString("method"),
+                                resultSet.getString("processing_mode"),
+                                resultSet.getString("status"),
+                                resultSet.getLong("amount_cents"),
+                                resultSet.getObject("approved_at", OffsetDateTime.class),
+                                nullableLong(resultSet, "cash_received_cents"),
+                                nullableLong(resultSet, "cash_change_cents"),
+                                resultSet.getString("provider"),
+                                resultSet.getObject("reversed_at", OffsetDateTime.class),
+                                resultSet.getString("reversal_reason")
                         )
                 )
                 .stream()
                 .findFirst();
-    }
-
-    public ReceiptEstablishmentResponse findEstablishment() {
-        return jdbcTemplate.queryForObject(
-                """
-                        SELECT company_name, cnpj, phone, address
-                        FROM system_settings
-                        WHERE id = 1
-                        """,
-                new MapSqlParameterSource(),
-                (rs, rowNum) -> new ReceiptEstablishmentResponse(
-                        blankToNull(rs.getString("company_name")),
-                        blankToNull(rs.getString("cnpj")),
-                        blankToNull(rs.getString("phone")),
-                        blankToNull(rs.getString("address"))
-                )
-        );
     }
 
     public TabReceiptRow findTab(UUID checkoutId) {
@@ -171,17 +135,14 @@ public class ReceiptReadRepository {
                                 WHERE tab.checkout_session_id = :checkoutId
                                 """,
                         params(checkoutId),
-                        (rs, rowNum) -> new TabReceiptRow(
-                                rs.getLong("id"),
-                                rs.getObject(
-                                        "checkout_session_id",
-                                        UUID.class
-                                ),
-                                rs.getString("name"),
-                                rs.getString("status"),
-                                rs.getLong("subtotal_cents"),
-                                rs.getLong("discount_cents"),
-                                rs.getLong("total_cents")
+                        (resultSet, rowNumber) -> new TabReceiptRow(
+                                resultSet.getLong("id"),
+                                resultSet.getObject("checkout_session_id", UUID.class),
+                                resultSet.getString("name"),
+                                resultSet.getString("status"),
+                                resultSet.getLong("subtotal_cents"),
+                                resultSet.getLong("discount_cents"),
+                                resultSet.getLong("total_cents")
                         )
                 )
                 .stream()
@@ -189,52 +150,6 @@ public class ReceiptReadRepository {
                 .orElseThrow(() -> new NotFoundException(
                         "BAR_TAB_NOT_FOUND",
                         "Comanda nao encontrada."
-                ));
-    }
-
-    public WorkOrderReceiptRow findWorkOrder(UUID checkoutId) {
-        return jdbcTemplate.query(
-                        """
-                                SELECT
-                                    wo.id,
-                                    wo.checkout_session_id,
-                                    wo.customer_name_snapshot,
-                                    wo.customer_phone_digits_snapshot,
-                                    wo.vehicle_name_snapshot,
-                                    wo.vehicle_plate_snapshot,
-                                    wo.vehicle_size,
-                                    wo.status,
-                                    wo.subtotal_cents,
-                                    wo.discount_cents,
-                                    wo.total_cents
-                                FROM lava_work_orders wo
-                                WHERE wo.checkout_session_id = :checkoutId
-                                """,
-                        params(checkoutId),
-                        (rs, rowNum) -> new WorkOrderReceiptRow(
-                                rs.getLong("id"),
-                                rs.getObject(
-                                        "checkout_session_id",
-                                        UUID.class
-                                ),
-                                rs.getString("customer_name_snapshot"),
-                                rs.getString(
-                                        "customer_phone_digits_snapshot"
-                                ),
-                                rs.getString("vehicle_name_snapshot"),
-                                rs.getString("vehicle_plate_snapshot"),
-                                rs.getString("vehicle_size"),
-                                rs.getString("status"),
-                                rs.getLong("subtotal_cents"),
-                                rs.getLong("discount_cents"),
-                                rs.getLong("total_cents")
-                        )
-                )
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException(
-                        "LAVA_WORK_ORDER_NOT_FOUND",
-                        "Ordem de servico nao encontrada."
                 ));
     }
 
@@ -256,49 +171,18 @@ public class ReceiptReadRepository {
         );
     }
 
-    public List<ReceiptLineResponse> findWorkOrderLines(long workOrderId) {
-        return jdbcTemplate.query(
-                """
-                        SELECT
-                            service_name_snapshot,
-                            price_cents
-                        FROM lava_work_order_lines
-                        WHERE work_order_id = :operationId
-                        ORDER BY id ASC
-                        """,
-                params(workOrderId),
-                (rs, rowNum) -> new ReceiptLineResponse(
-                        rs.getString("service_name_snapshot"),
-                        null,
-                        1,
-                        rs.getLong("price_cents"),
-                        rs.getLong("price_cents")
-                )
-        );
-    }
-
     private MapSqlParameterSource params(UUID checkoutId) {
-        return new MapSqlParameterSource()
-                .addValue("checkoutId", checkoutId);
+        return new MapSqlParameterSource().addValue("checkoutId", checkoutId);
     }
 
     private MapSqlParameterSource params(long operationId) {
-        return new MapSqlParameterSource()
-                .addValue("operationId", operationId);
+        return new MapSqlParameterSource().addValue("operationId", operationId);
     }
 
-    private static Long nullableLong(ResultSet rs, String column)
+    private static Long nullableLong(ResultSet resultSet, String column)
             throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? null : value;
-    }
-
-    private static String blankToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-
-        return value.trim();
+        long value = resultSet.getLong(column);
+        return resultSet.wasNull() ? null : value;
     }
 
     public record CheckoutReceiptRow(
@@ -325,58 +209,22 @@ public class ReceiptReadRepository {
     ) {
     }
 
-    public record WorkOrderReceiptRow(
-            long id,
-            UUID checkoutId,
-            String customerName,
-            String customerPhone,
-            String vehicleName,
-            String vehiclePlate,
-            String vehicleSize,
-            String status,
-            long subtotalCents,
-            long discountCents,
-            long totalCents
-    ) {
-
-        public ReceiptCustomerResponse customer() {
-            return new ReceiptCustomerResponse(
-                    customerName,
-                    customerPhone
-            );
-        }
-
-        public ReceiptVehicleResponse vehicle() {
-            if (vehicleName == null
-                    && vehiclePlate == null
-                    && vehicleSize == null) {
-                return null;
-            }
-
-            return new ReceiptVehicleResponse(
-                    vehicleName,
-                    vehiclePlate,
-                    vehicleSize
-            );
-        }
-    }
-
     private static final class CheckoutReceiptRowMapper
             implements RowMapper<CheckoutReceiptRow> {
 
         @Override
-        public CheckoutReceiptRow mapRow(ResultSet rs, int rowNum)
+        public CheckoutReceiptRow mapRow(ResultSet resultSet, int rowNumber)
                 throws SQLException {
             return new CheckoutReceiptRow(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("operation_type"),
-                    nullableLong(rs, "source_id"),
-                    rs.getString("status"),
-                    rs.getLong("subtotal_cents"),
-                    rs.getLong("discount_cents"),
-                    rs.getLong("total_cents"),
-                    nullableLong(rs, "created_by_user_id"),
-                    rs.getString("created_by_user_name")
+                    resultSet.getObject("id", UUID.class),
+                    resultSet.getString("operation_type"),
+                    nullableLong(resultSet, "source_id"),
+                    resultSet.getString("status"),
+                    resultSet.getLong("subtotal_cents"),
+                    resultSet.getLong("discount_cents"),
+                    resultSet.getLong("total_cents"),
+                    nullableLong(resultSet, "created_by_user_id"),
+                    resultSet.getString("created_by_user_name")
             );
         }
     }
@@ -385,14 +233,14 @@ public class ReceiptReadRepository {
             implements RowMapper<ReceiptLineResponse> {
 
         @Override
-        public ReceiptLineResponse mapRow(ResultSet rs, int rowNum)
+        public ReceiptLineResponse mapRow(ResultSet resultSet, int rowNumber)
                 throws SQLException {
             return new ReceiptLineResponse(
-                    rs.getString("item_name_snapshot"),
-                    rs.getString("category_name_snapshot"),
-                    rs.getInt("quantity"),
-                    rs.getLong("unit_price_cents"),
-                    rs.getLong("line_total_cents")
+                    resultSet.getString("item_name_snapshot"),
+                    resultSet.getString("category_name_snapshot"),
+                    resultSet.getInt("quantity"),
+                    resultSet.getLong("unit_price_cents"),
+                    resultSet.getLong("line_total_cents")
             );
         }
     }

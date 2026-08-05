@@ -1,6 +1,5 @@
 import {
   ContentStack,
-  SectionTitle,
 } from "../../components/ui";
 
 import {
@@ -15,21 +14,9 @@ import {
   AdminUsersPanel,
 } from "./users";
 
-import {
-  AdminSettingsPanel,
-} from "./settings";
-
-export type AdminTab =
-  | "users"
-  | "settings";
-
-export function AdminPanel({
-  activePanel,
-}: {
-  activePanel: AdminTab;
-}) {
+export function AdminPanel() {
   const {
-    canAccessAdminPanel,
+    can,
     session,
   } = useAccessControl();
 
@@ -42,49 +29,22 @@ export function AdminPanel({
     removeUser,
   } = useAdminDomain();
 
-  const {
-    users,
-  } = domainState;
-
-  const canViewActivePanel =
-    activePanel === "users"
-      ? canAccessAdminPanel("users")
-      : canAccessAdminPanel(
-          "settings"
-        );
-
-  if (!canViewActivePanel) {
+  if (!can("admin:users")) {
     return null;
   }
 
   return (
     <ContentStack>
-      {activePanel === "settings" ? (
-        <SectionTitle title="Configurações" />
-      ) : null}
-
-      {activePanel === "users" ? (
-        <AdminUsersPanel
-          users={users}
-          currentUserId={
-            session.userId
-          }
-          currentUserRole={
-            session.role
-          }
-          onCreate={createUser}
-          onUpdate={updateUser}
-          onSetStatus={
-            setUserStatus
-          }
-          onResetPassword={
-            resetUserPassword
-          }
-          onRemove={removeUser}
-        />
-      ) : (
-        <AdminSettingsPanel />
-      )}
+      <AdminUsersPanel
+        users={domainState.users}
+        currentUserId={session.userId}
+        currentUserRole={session.role}
+        onCreate={createUser}
+        onUpdate={updateUser}
+        onSetStatus={setUserStatus}
+        onResetPassword={resetUserPassword}
+        onRemove={removeUser}
+      />
     </ContentStack>
   );
 }

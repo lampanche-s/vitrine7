@@ -31,7 +31,6 @@ public class TerminalPaymentStartService {
     private final PaymentRepository paymentRepository;
     private final PaymentTerminalTransactionRepository
             terminalTransactionRepository;
-    private final PaymentTerminalSettingsService terminalSettingsService;
     private final ActivePaymentProviderService activePaymentProviderService;
     private final Clock clock;
 

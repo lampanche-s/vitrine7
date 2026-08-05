@@ -1,5 +1,6 @@
 package br.com.vitrine7.system.user.service;
 
+import br.com.vitrine7.auth.service.AuthSessionService;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.InvalidRequestException;
 import br.com.vitrine7.common.exception.NotFoundException;
@@ -44,6 +45,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthSessionService authSessionService;
 
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> list(
@@ -103,7 +105,7 @@ public class UserService {
                 null,
                 passwordEncoder.encode(request.password()),
                 request.role(),
-                request.status()
+                UserStatus.ATIVO
         );
 
         UserResponse response;
@@ -154,6 +156,7 @@ public class UserService {
 
         if (authenticationChanged) {
             user.incrementAuthVersion();
+            authSessionService.revokeAllForUser(user.getId());
         }
 
         UserResponse response;
@@ -197,6 +200,7 @@ public class UserService {
 
         user.setStatus(request.status());
         user.incrementAuthVersion();
+        authSessionService.revokeAllForUser(user.getId());
 
         UserResponse response = UserResponse.from(user);
 
@@ -226,6 +230,7 @@ public class UserService {
                 passwordEncoder.encode(request.newPassword())
         );
         user.incrementAuthVersion();
+        authSessionService.revokeAllForUser(user.getId());
 
     }
 
@@ -245,6 +250,7 @@ public class UserService {
 
         validateLastAdministratorDeletion(user, actor.getRole());
         user.softDelete(actor.getId());
+        authSessionService.revokeAllForUser(user.getId());
 
     }
 

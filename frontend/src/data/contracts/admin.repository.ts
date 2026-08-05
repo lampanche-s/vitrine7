@@ -1,8 +1,4 @@
 import type {
-  SystemSettings,
-} from "../../entities/settings";
-
-import type {
   SystemUser,
   SystemUserInput,
   SystemUserStatus,
@@ -10,7 +6,6 @@ import type {
 
 export type AdminRepositorySnapshot = {
   users: SystemUser[];
-  settings: SystemSettings;
 };
 
 export interface AdminRepository {
@@ -42,8 +37,4 @@ export interface AdminRepository {
   removeUser(
     userId: number
   ): Promise<void>;
-
-  saveSettings(
-    settings: SystemSettings
-  ): Promise<SystemSettings>;
 }

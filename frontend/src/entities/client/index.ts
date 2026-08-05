@@ -1,14 +1,9 @@
 export type {
-  LavaClient,
-  LavaClientInput,
+  Client,
+  ClientInput,
 } from "./client.types";
 
 export {
-  createLavaClient,
-  isLavaClientInputComplete,
-  normalizeLavaClientInput,
-  removeLavaClient,
-  setLavaClientActive,
-  toggleLavaClientStatus,
-  updateLavaClient,
+  isClientInputComplete,
+  normalizeClientInput,
 } from "./client.rules";

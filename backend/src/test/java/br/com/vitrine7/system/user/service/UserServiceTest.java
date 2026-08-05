@@ -1,5 +1,6 @@
 package br.com.vitrine7.system.user.service;
 
+import br.com.vitrine7.auth.service.AuthSessionService;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.system.user.dto.CreateUserRequest;
 import br.com.vitrine7.system.user.dto.ResetUserPasswordRequest;
@@ -31,11 +32,14 @@ class UserServiceTest {
             mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder =
             mock(PasswordEncoder.class);
+    private final AuthSessionService authSessionService =
+            mock(AuthSessionService.class);
 
     private final UserService userService =
             new UserService(
                     userRepository,
-                    passwordEncoder
+                    passwordEncoder,
+                    authSessionService
             );
 
     @Test
@@ -57,13 +61,13 @@ class UserServiceTest {
                         "Operador",
                         " Operador Caixa ",
                         "abc123",
-                        UserRole.OPERADOR,
-                        UserStatus.ATIVO
+                        UserRole.OPERADOR
                 ),
                 principal(1L, UserRole.ADMINISTRADOR)
         );
 
         assertEquals("Operador Caixa", response.username());
+        assertEquals("ATIVO", response.status());
         verify(userRepository).saveAndFlush(any(UserEntity.class));
     }
 
@@ -80,8 +84,7 @@ class UserServiceTest {
                                 "Operador",
                                 "OPERADOR",
                                 "abc123",
-                                UserRole.OPERADOR,
-                                UserStatus.ATIVO
+                                UserRole.OPERADOR
                         ),
                         principal(1L, UserRole.ADMINISTRADOR)
                 )
@@ -102,8 +105,7 @@ class UserServiceTest {
                                 "Administrador",
                                 "admin2",
                                 "abc123",
-                                UserRole.ADMINISTRADOR,
-                                UserStatus.ATIVO
+                                UserRole.ADMINISTRADOR
                         ),
                         principal(1L, UserRole.ADMINISTRADOR)
                 )
@@ -129,8 +131,7 @@ class UserServiceTest {
                         "Administrador",
                         "admin2",
                         "abc123",
-                        UserRole.ADMINISTRADOR,
-                        UserStatus.ATIVO
+                        UserRole.ADMINISTRADOR
                 ),
                 principal(99L, UserRole.SUPER_ADMIN)
         );
@@ -171,6 +172,7 @@ class UserServiceTest {
         assertEquals(1L, user.getAuthVersion());
         assertEquals("legacy@example.com", user.getEmail());
         verify(userRepository).flush();
+        verify(authSessionService).revokeAllForUser(9L);
     }
 
     @Test
@@ -200,6 +202,7 @@ class UserServiceTest {
 
         assertEquals("new-hash", user.getPasswordHash());
         assertEquals(1L, user.getAuthVersion());
+        verify(authSessionService).revokeAllForUser(9L);
     }
 
     private VitrineUserPrincipal principal(

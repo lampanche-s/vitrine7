@@ -9,7 +9,6 @@ import {
 } from "../../data/test-fixtures/session.fixture";
 
 import {
-  canAccessAdminPanel,
   canAccessSystemModule,
   hasAppPermission,
 } from "./access.rules";
@@ -20,19 +19,19 @@ import type {
 
 describe("access.rules", () => {
   it(
-    "permite acesso quando a função possui a permissão correspondente",
+    "permite acesso quando a sessão possui a permissão correspondente",
     () => {
       expect(
         canAccessSystemModule(
           mockCurrentSession,
-          "lava"
+          "clients"
         )
       ).toBe(true);
 
       expect(
         hasAppPermission(
           mockCurrentSession,
-          "admin:settings"
+          "admin:users"
         )
       ).toBe(true);
     }
@@ -53,21 +52,14 @@ describe("access.rules", () => {
       expect(
         canAccessSystemModule(
           limitedSession,
-          "lava"
+          "clients"
         )
       ).toBe(false);
 
       expect(
-        canAccessAdminPanel(
+        hasAppPermission(
           limitedSession,
-          "users"
-        )
-      ).toBe(false);
-
-      expect(
-        canAccessAdminPanel(
-          limitedSession,
-          "settings"
+          "admin:users"
         )
       ).toBe(false);
     }

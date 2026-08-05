@@ -142,16 +142,13 @@ function BarContentView({
 
   if (activeTab === "bar-reports") {
     return (
-      <ContentStack>
-        <BarReports
-          onLoadHistory={listHistory}
-          onLoadLavaHistory={(input) =>
-            repositories.lava.listHistory(
-              input
-            )
-          }
-        />
-      </ContentStack>
+      <ModuleAccessGuard moduleId="reports">
+        <ContentStack>
+          <BarReports
+            repository={repositories.reports}
+          />
+        </ContentStack>
+      </ModuleAccessGuard>
     );
   }
 

@@ -9,8 +9,6 @@ public record ReceiptResponse(
         String nonFiscalNotice,
         ReceiptEstablishmentResponse establishment,
         ReceiptOperationResponse operation,
-        ReceiptCustomerResponse customer,
-        ReceiptVehicleResponse vehicle,
         List<ReceiptLineResponse> lines,
         long subtotalCents,
         long discountCents,
