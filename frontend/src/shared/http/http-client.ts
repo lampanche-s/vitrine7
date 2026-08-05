@@ -15,6 +15,11 @@ type HttpRequestOptions = Omit<
   timeoutMs?: number;
 };
 
+export type HttpDownloadedFile = {
+  blob: Blob;
+  fileName: string;
+};
+
 const CSRF_COOKIE_NAME = "XSRF-TOKEN";
 const CSRF_HEADER_NAME = "X-XSRF-TOKEN";
 const USER_ACTIVITY_HEADER_NAME =
@@ -333,6 +338,155 @@ async function request<T>(
   }
 }
 
+
+function downloadFileName(
+  response: Response
+): string {
+  const contentDisposition =
+    response.headers.get(
+      "content-disposition"
+    ) ?? "";
+
+  const utf8Match =
+    contentDisposition.match(
+      /filename\*=UTF-8''([^;]+)/i
+    );
+
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(
+        utf8Match[1]
+      );
+    } catch {
+      // Tenta o formato simples abaixo.
+    }
+  }
+
+  const simpleMatch =
+    contentDisposition.match(
+      /filename="?([^";]+)"?/i
+    );
+
+  return (
+    simpleMatch?.[1]?.trim() ||
+    "vitrine7-backup.backup"
+  );
+}
+
+async function requestDownload(
+  path: string,
+  options: HttpRequestOptions = {}
+): Promise<HttpDownloadedFile> {
+  const controller =
+    new AbortController();
+
+  const timeoutId =
+    window.setTimeout(
+      () => controller.abort(),
+      options.timeoutMs ??
+        appEnv.httpTimeoutMs
+    );
+
+  const headers =
+    new Headers(options.headers);
+
+  headers.set(
+    "Accept",
+    "application/octet-stream"
+  );
+
+  if (options.userActivity !== false) {
+    headers.set(
+      USER_ACTIVITY_HEADER_NAME,
+      "true"
+    );
+  }
+
+  try {
+    if (isUnsafeMethod(options.method)) {
+      const csrfToken =
+        await ensureCsrfToken();
+
+      if (csrfToken) {
+        headers.set(
+          CSRF_HEADER_NAME,
+          csrfToken
+        );
+      }
+    }
+
+    const response = await fetch(
+      buildUrl(path),
+      {
+        ...options,
+        headers,
+        credentials: "include",
+        signal: controller.signal,
+      }
+    );
+
+    if (!response.ok) {
+      const payload =
+        await parseResponse(response);
+
+      if (response.status === 401) {
+        window.dispatchEvent(
+          new CustomEvent(
+            AUTH_SESSION_EXPIRED_EVENT
+          )
+        );
+      }
+
+      throw new HttpError(
+        getDetailedErrorMessage(
+          payload,
+          `A requisição falhou com status ${response.status}.`
+        ),
+        response.status,
+        payload
+      );
+    }
+
+    return {
+      blob: await response.blob(),
+      fileName:
+        downloadFileName(response),
+    };
+  } catch (error) {
+    if (error instanceof HttpError) {
+      throw error;
+    }
+
+    if (
+      error instanceof Error &&
+      error.name === "AbortError"
+    ) {
+      throw new HttpError(
+        "A geração do backup excedeu o tempo limite.",
+        408
+      );
+    }
+
+    if (error instanceof TypeError) {
+      throw new HttpError(
+        SERVER_UNAVAILABLE_MESSAGE,
+        0,
+        error
+      );
+    }
+
+    throw new HttpError(
+      error instanceof Error
+        ? error.message
+        : "Não foi possível baixar o backup.",
+      0,
+      error
+    );
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export const httpClient = {
   get<T>(
     path: string,
@@ -402,6 +556,16 @@ export const httpClient = {
         ...options,
         method: "DELETE",
       }
+    );
+  },
+
+  download(
+    path: string,
+    options?: HttpRequestOptions
+  ): Promise<HttpDownloadedFile> {
+    return requestDownload(
+      path,
+      options
     );
   },
 };

@@ -26,6 +26,9 @@ app:
     document: ${APP_ESTABLISHMENT_DOCUMENT:}
     phone: ${APP_ESTABLISHMENT_PHONE:}
     address: ${APP_ESTABLISHMENT_ADDRESS:Rua Senhor do Bonfim, Monte Gordo, Camaçari/BA}
+  backup:
+    pg-dump-path: ${APP_BACKUP_PG_DUMP_PATH:pg_dump}
+    timeout: ${APP_BACKUP_TIMEOUT:5m}
   payment-terminal:
     bridge:
       command-timeout: ${APP_PAYMENT_TERMINAL_BRIDGE_COMMAND_TIMEOUT:120s}

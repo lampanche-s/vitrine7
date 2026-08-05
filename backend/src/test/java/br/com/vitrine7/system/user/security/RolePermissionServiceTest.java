@@ -27,9 +27,15 @@ class RolePermissionServiceTest {
     }
 
     @Test
-    void operatorAccessesOnlyOperationalBarFlow() {
+    void operatorAccessesEveryOperationalAreaExceptUserManagement() {
         assertEquals(
-                Set.of(Permission.BAR_ACCESS),
+                Set.of(
+                        Permission.BAR_ACCESS,
+                        Permission.BAR_MANAGE_CATALOG,
+                        Permission.CLIENTS_MANAGE,
+                        Permission.PAYMENT_REVERSE,
+                        Permission.REPORTS_ACCESS
+                ),
                 service.getPermissions(UserRole.OPERADOR)
         );
     }

@@ -42,4 +42,14 @@ export const httpReportsRepository: ReportsRepository = {
       }
     );
   },
+
+  downloadSystemBackup() {
+    return httpClient.download(
+      "/system/backup",
+      {
+        method: "POST",
+        timeoutMs: 300_000,
+      }
+    );
+  },
 };

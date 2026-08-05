@@ -19,4 +19,5 @@ export type {
   ReportsRepository,
   SalesReport,
   SalesReportScope,
+  SystemBackupDownload,
 } from "./reports.repository";

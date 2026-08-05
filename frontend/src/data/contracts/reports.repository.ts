@@ -60,6 +60,11 @@ export type SalesReport = {
   lines: SalesReportLine[];
 };
 
+export type SystemBackupDownload = {
+  blob: Blob;
+  fileName: string;
+};
+
 export interface ReportsRepository {
   summary(input?: {
     from?: string;
@@ -72,4 +77,6 @@ export interface ReportsRepository {
     to: string;
     scope: Exclude<SalesReportScope, "ALL">;
   }): Promise<SalesReport>;
+
+  downloadSystemBackup(): Promise<SystemBackupDownload>;
 }

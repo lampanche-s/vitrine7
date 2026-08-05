@@ -24,7 +24,11 @@ public class RolePermissionService {
             );
 
             case OPERADOR -> EnumSet.of(
-                    Permission.BAR_ACCESS
+                    Permission.BAR_ACCESS,
+                    Permission.BAR_MANAGE_CATALOG,
+                    Permission.CLIENTS_MANAGE,
+                    Permission.PAYMENT_REVERSE,
+                    Permission.REPORTS_ACCESS
             );
         };
     }

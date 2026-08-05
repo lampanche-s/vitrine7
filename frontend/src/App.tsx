@@ -24,6 +24,7 @@ import {
   AppProviders,
 } from "./features/app";
 import type {
+  AppPermission,
   AppSession,
 } from "./features/access";
 import {
@@ -58,7 +59,7 @@ type NavigationItem = {
   id: AppSection;
   label: string;
   icon: typeof ClipboardList;
-  administratorOnly?: boolean;
+  permission: AppPermission;
 };
 
 const navigationItems: NavigationItem[] = [
@@ -66,35 +67,37 @@ const navigationItems: NavigationItem[] = [
     id: "commands",
     label: "Comandas",
     icon: ClipboardList,
+    permission: "bar:access",
   },
   {
     id: "history",
     label: "Histórico",
     icon: History,
+    permission: "bar:access",
   },
   {
     id: "catalog",
     label: "Cadastro",
     icon: NotebookTabs,
-    administratorOnly: true,
+    permission: "bar:manage-catalog",
   },
   {
     id: "clients",
     label: "Clientes",
     icon: Users,
-    administratorOnly: true,
+    permission: "clients:manage",
   },
   {
     id: "reports",
     label: "Relatórios",
     icon: BarChart3,
-    administratorOnly: true,
+    permission: "reports:access",
   },
   {
     id: "users",
     label: "Usuários",
     icon: UserCog,
-    administratorOnly: true,
+    permission: "admin:users",
   },
 ];
 
@@ -126,32 +129,15 @@ function AppContent({
 
   const {
     can,
-    session,
   } = useAccessControl();
-
-  const isAdministrator =
-    session.role !== "OPERADOR";
-
-  const canOpenUsers =
-    can("admin:users");
 
   const activeNavigation =
     activeSection;
 
   const visibleNavigationItems =
-    navigationItems.filter((item) => {
-      if (
-        item.id === "users" &&
-        !canOpenUsers
-      ) {
-        return false;
-      }
-
-      return (
-        !item.administratorOnly ||
-        isAdministrator
-      );
-    });
+    navigationItems.filter((item) =>
+      can(item.permission)
+    );
 
   function renderActiveContent() {
     switch (activeSection) {

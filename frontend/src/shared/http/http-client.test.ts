@@ -162,4 +162,64 @@ describe("httpClient session activity", () => {
         "Não foi possível conectar ao servidor. Verifique se o sistema está disponível e tente novamente.",
     });
   });
+
+  it("baixa arquivo binário usando o nome informado pelo servidor", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            token: "csrf-token",
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response("backup-data", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition":
+              "attachment; filename=\"vitrine7-backup-20260805-175600.backup\"",
+          },
+        })
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      httpClient,
+    } = await import("./http-client");
+
+    const result = await httpClient.download(
+      "/system/backup",
+      {
+        method: "POST",
+      }
+    );
+
+    expect(result.fileName).toBe(
+      "vitrine7-backup-20260805-175600.backup"
+    );
+    expect(await result.blob.text()).toBe(
+      "backup-data"
+    );
+
+    const request = fetchMock.mock.calls[1]?.[1] as
+      | RequestInit
+      | undefined;
+
+    expect(request?.method).toBe("POST");
+    expect(
+      (request?.headers as Headers).get(
+        "Accept"
+      )
+    ).toBe("application/octet-stream");
+  });
+
 });

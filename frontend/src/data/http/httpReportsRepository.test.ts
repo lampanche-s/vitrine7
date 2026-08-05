@@ -8,11 +8,13 @@ import {
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
+  download: vi.fn(),
 }));
 
 vi.mock("../../shared/http", () => ({
   httpClient: {
     get: mocks.get,
+    download: mocks.download,
   },
 }));
 
@@ -23,7 +25,12 @@ import {
 describe("httpReportsRepository", () => {
   beforeEach(() => {
     mocks.get.mockReset();
+    mocks.download.mockReset();
     mocks.get.mockResolvedValue({});
+    mocks.download.mockResolvedValue({
+      blob: new Blob(),
+      fileName: "vitrine7-backup.backup",
+    });
   });
 
   it("carrega o resumo consolidado", async () => {
@@ -48,4 +55,17 @@ describe("httpReportsRepository", () => {
       }
     );
   });
+
+  it("baixa o backup completo do sistema", async () => {
+    await httpReportsRepository.downloadSystemBackup();
+
+    expect(mocks.download).toHaveBeenCalledWith(
+      "/system/backup",
+      {
+        method: "POST",
+        timeoutMs: 300_000,
+      }
+    );
+  });
+
 });

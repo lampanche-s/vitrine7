@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import {
+  DatabaseBackup,
   Download,
 } from "lucide-react";
 
@@ -170,7 +171,9 @@ export function UnifiedReportExportActions({
   const [customFrom, setCustomFrom] = useState(defaults.from);
   const [customTo, setCustomTo] = useState(defaults.to);
   const [exportError, setExportError] = useState("");
+  const [backupError, setBackupError] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
 
   function openExportModal(scope: ReportScope) {
     setExportScope(scope);
@@ -214,6 +217,47 @@ export function UnifiedReportExportActions({
     }
   }
 
+
+  async function handleSystemBackup() {
+    if (isBackingUp) {
+      return;
+    }
+
+    setBackupError("");
+    setIsBackingUp(true);
+
+    try {
+      const backup =
+        await repository.downloadSystemBackup();
+
+      const objectUrl =
+        URL.createObjectURL(backup.blob);
+      const anchor =
+        document.createElement("a");
+
+      anchor.href = objectUrl;
+      anchor.download = backup.fileName;
+      anchor.style.display = "none";
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      window.setTimeout(
+        () => URL.revokeObjectURL(objectUrl),
+        0
+      );
+    } catch (error) {
+      setBackupError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível baixar o backup."
+      );
+    } finally {
+      setIsBackingUp(false);
+    }
+  }
+
   return (
     <>
       <PageActions>
@@ -232,7 +276,29 @@ export function UnifiedReportExportActions({
         >
           Relatório Lava Jato
         </Button>
+
+        <Button
+          variant="secondary"
+          leadingIcon={<DatabaseBackup />}
+          disabled={isBackingUp}
+          onClick={() =>
+            void handleSystemBackup()
+          }
+        >
+          {isBackingUp
+            ? "Gerando backup..."
+            : "Baixar backup"}
+        </Button>
       </PageActions>
+
+      {backupError ? (
+        <p
+          className="text-sm text-[var(--color-danger)]"
+          role="alert"
+        >
+          {backupError}
+        </p>
+      ) : null}
 
       <ReportExportModal
         open={exportScope !== null}

@@ -40,25 +40,36 @@ describe("access.rules", () => {
   it(
     "nega acesso quando a sessão não possui permissão",
     () => {
-      const limitedSession: AppSession = {
+      const operatorSession: AppSession = {
         userId: 99,
-        displayName: "Operador limitado",
+        displayName: "Operador",
         role: "OPERADOR",
         permissions: [
           "bar:access",
+          "bar:manage-catalog",
+          "clients:manage",
+          "reports:access",
+          "payment:reverse",
         ],
       };
 
       expect(
         canAccessSystemModule(
-          limitedSession,
+          operatorSession,
           "clients"
         )
-      ).toBe(false);
+      ).toBe(true);
+
+      expect(
+        canAccessSystemModule(
+          operatorSession,
+          "reports"
+        )
+      ).toBe(true);
 
       expect(
         hasAppPermission(
-          limitedSession,
+          operatorSession,
           "admin:users"
         )
       ).toBe(false);

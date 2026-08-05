@@ -4,6 +4,7 @@
 
 - Java 17
 - PostgreSQL 16
+- cliente PostgreSQL com `pg_dump` disponível para o usuário `vitrine7`
 - Nginx
 - serviço `vitrine7-backend.service`
 - diretórios `/opt/vitrine7/backend` e `/opt/vitrine7/frontend`
@@ -21,6 +22,8 @@ APP_ESTABLISHMENT_NAME=Vitrine 7
 APP_ESTABLISHMENT_DOCUMENT=
 APP_ESTABLISHMENT_PHONE=
 APP_ESTABLISHMENT_ADDRESS=Rua Senhor do Bonfim, Monte Gordo, Camaçari/BA
+APP_BACKUP_PG_DUMP_PATH=/usr/bin/pg_dump
+APP_BACKUP_TIMEOUT=5m
 ```
 
 Mantenha também as variáveis de criptografia e do perfil de pagamento já usadas no ambiente atual.
@@ -71,7 +74,9 @@ curl -fsS http://127.0.0.1:8081/actuator/health
 curl -I https://vitrine7sys.duckdns.org
 ```
 
-Depois valide no navegador: login, Cadastro, Clientes, Comandas, quatro pagamentos, marcação de estorno, Histórico, comprovante e relatórios.
+Depois valide no navegador: login, Cadastro, Clientes, Comandas, quatro pagamentos, marcação de estorno, Histórico, comprovante, relatórios e download do backup `.backup`.
+
+O backup baixado pela tela de Relatórios contém o banco completo, incluindo usuários e dados operacionais. Armazene-o fora da VPS e restrinja o acesso ao arquivo.
 
 ## Rollback
 
