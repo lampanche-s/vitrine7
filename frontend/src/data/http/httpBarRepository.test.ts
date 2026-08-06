@@ -65,6 +65,8 @@ describe("httpBarRepository", () => {
               name: "Lavagem expressa",
               type: "SERVICE",
               priceCents: 2500,
+              stockQuantity: null,
+              minimumStockQuantity: null,
             },
           ],
           page: 0,
@@ -92,6 +94,8 @@ describe("httpBarRepository", () => {
           name: "Lavagem expressa",
           type: "SERVICE",
           price: 25,
+          stockQuantity: null,
+          minimumStockQuantity: null,
         },
       ],
       historyEntries: [],
@@ -104,12 +108,16 @@ describe("httpBarRepository", () => {
       name: "Espeto bovino",
       type: "ITEM",
       priceCents: 2490,
+      stockQuantity: 20,
+      minimumStockQuantity: 5,
     });
     httpClient.put.mockResolvedValueOnce({
       id: 9,
       name: "Espeto bovino especial",
       type: "ITEM",
       priceCents: 2690,
+      stockQuantity: 18,
+      minimumStockQuantity: 5,
     });
 
     const { httpBarRepository } =
@@ -119,6 +127,8 @@ describe("httpBarRepository", () => {
       name: "Espeto bovino",
       type: "ITEM",
       price: 24.9,
+      stockQuantity: 20,
+      minimumStockQuantity: 5,
     });
     const updated =
       await httpBarRepository.updateCatalogEntry(
@@ -127,6 +137,8 @@ describe("httpBarRepository", () => {
           name: "Espeto bovino especial",
           type: "ITEM",
           price: 26.9,
+          stockQuantity: 18,
+          minimumStockQuantity: 5,
         }
       );
     await httpBarRepository.removeCatalogEntry(9);
@@ -137,6 +149,8 @@ describe("httpBarRepository", () => {
         name: "Espeto bovino",
         type: "ITEM",
         priceCents: 2490,
+        stockQuantity: 20,
+        minimumStockQuantity: 5,
       }
     );
     expect(updated.price).toBe(26.9);
@@ -191,9 +205,24 @@ describe("httpBarRepository", () => {
   });
 
   it("finaliza o checkout e devolve histórico da comanda", async () => {
-    httpClient.get.mockResolvedValueOnce(
-      tabResponse("PAYMENT_PENDING")
-    );
+    httpClient.get
+      .mockResolvedValueOnce(
+        tabResponse("PAYMENT_PENDING")
+      )
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 5,
+            name: "Espeto",
+            type: "ITEM",
+            priceCents: 1200,
+            stockQuantity: 9,
+            minimumStockQuantity: 3,
+          },
+        ],
+        page: 0,
+        totalPages: 1,
+      });
     httpClient.post.mockResolvedValueOnce({
       checkout: {
         id: "checkout-tab-1",
@@ -226,8 +255,13 @@ describe("httpBarRepository", () => {
       })
     );
     expect(result.historyEntry).toMatchObject({
-        amount: 12,
+      amount: 12,
       method: "Pix",
+    });
+    expect(result.catalogEntries?.[0]).toMatchObject({
+      id: 5,
+      stockQuantity: 9,
+      minimumStockQuantity: 3,
     });
   });
 

@@ -57,6 +57,9 @@ export function barDomainReducer(
           action.payload.historyEntry,
           ...state.historyEntries,
         ],
+        catalogEntries:
+          action.payload.catalogEntries ??
+          state.catalogEntries,
       };
 
     case "catalog/created":

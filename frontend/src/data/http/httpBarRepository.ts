@@ -55,6 +55,8 @@ type CatalogEntryResponse = {
   name: string;
   type: "ITEM" | "SERVICE";
   priceCents: number;
+  stockQuantity: number | null;
+  minimumStockQuantity: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -234,6 +236,9 @@ function mapCatalogEntry(
     name: entry.name,
     type: entry.type,
     price: entry.priceCents / 100,
+    stockQuantity: entry.stockQuantity,
+    minimumStockQuantity:
+      entry.minimumStockQuantity,
   };
 }
 
@@ -294,12 +299,22 @@ function catalogEntryPayload(input: {
   name: string;
   type: "ITEM" | "SERVICE";
   price: number;
+  stockQuantity: number | null;
+  minimumStockQuantity: number | null;
 }) {
   return {
     name: input.name.trim(),
     type: input.type,
     priceCents:
       Math.round(input.price * 100),
+    stockQuantity:
+      input.type === "ITEM"
+        ? input.stockQuantity
+        : null,
+    minimumStockQuantity:
+      input.type === "ITEM"
+        ? input.minimumStockQuantity
+        : null,
   };
 }
 
@@ -689,8 +704,13 @@ export const httpBarRepository: BarRepository = {
       status: "CLOSED",
     });
 
+    const catalogEntries =
+      await refreshCatalogEntries()
+        .catch(() => null);
+
     return {
       closedCommand,
+      catalogEntries,
       historyEntry: {
         id: prepared.id,
         checkoutId: prepared.checkoutId,

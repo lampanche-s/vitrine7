@@ -304,6 +304,7 @@ export function BarDomainProvider({
           payload: {
             commandId: result.closedCommand.id,
             historyEntry: result.historyEntry,
+            catalogEntries: result.catalogEntries,
           },
         });
         return result.closedCommand;

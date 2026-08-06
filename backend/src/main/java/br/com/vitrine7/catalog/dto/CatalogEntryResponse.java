@@ -9,6 +9,8 @@ public record CatalogEntryResponse(
         String name,
         String type,
         Long priceCents,
+        Integer stockQuantity,
+        Integer minimumStockQuantity,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
@@ -21,6 +23,8 @@ public record CatalogEntryResponse(
                 entry.getName(),
                 entry.getEntryType().name(),
                 entry.getPriceCents(),
+                entry.getStockQuantity(),
+                entry.getMinimumStockQuantity(),
                 entry.getCreatedAt(),
                 entry.getUpdatedAt()
         );

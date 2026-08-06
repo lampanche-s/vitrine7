@@ -25,8 +25,6 @@ try {
         "terminal-reversal",
         "directSale",
         "saleItems",
-        "stockQuantity",
-        "minimumStockQuantity",
         "adminMode"
     )
 
@@ -59,8 +57,8 @@ try {
         throw "Ainda existem artefatos gerados ou backups versionados."
     }
 
-    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V40__simplify_payment_reversal.sql")) {
-        throw "A migration V40 nao foi encontrada."
+    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V41__add_simplified_catalog_stock.sql")) {
+        throw "A migration V41 nao foi encontrada."
     }
 
     Write-Host "Auditoria final aprovada."

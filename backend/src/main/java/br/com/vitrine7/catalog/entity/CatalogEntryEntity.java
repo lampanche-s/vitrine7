@@ -54,6 +54,12 @@ public class CatalogEntryEntity {
     )
     private Long priceCents;
 
+    @Column(name = "stock_quantity")
+    private Integer stockQuantity;
+
+    @Column(name = "minimum_stock_quantity")
+    private Integer minimumStockQuantity;
+
     @CreationTimestamp
     @Column(
             name = "created_at",
@@ -83,7 +89,9 @@ public class CatalogEntryEntity {
             CatalogEntryType entryType,
             String name,
             String normalizedName,
-            Long priceCents
+            Long priceCents,
+            Integer stockQuantity,
+            Integer minimumStockQuantity
     ) {
         CatalogEntryEntity entry =
                 new CatalogEntryEntity();
@@ -92,6 +100,11 @@ public class CatalogEntryEntity {
         entry.name = name;
         entry.normalizedName = normalizedName;
         entry.priceCents = priceCents;
+        entry.applyStockConfiguration(
+                entryType,
+                stockQuantity,
+                minimumStockQuantity
+        );
 
         return entry;
     }
@@ -100,16 +113,75 @@ public class CatalogEntryEntity {
             CatalogEntryType entryType,
             String name,
             String normalizedName,
-            Long priceCents
+            Long priceCents,
+            Integer stockQuantity,
+            Integer minimumStockQuantity
     ) {
         this.entryType = entryType;
         this.name = name;
         this.normalizedName = normalizedName;
         this.priceCents = priceCents;
+        applyStockConfiguration(
+                entryType,
+                stockQuantity,
+                minimumStockQuantity
+        );
+    }
+
+    public boolean tracksStock() {
+        return entryType == CatalogEntryType.ITEM;
+    }
+
+    public boolean hasAvailableStock(int requestedQuantity) {
+        return !tracksStock()
+                || (
+                        stockQuantity != null
+                        && requestedQuantity <= stockQuantity
+                );
+    }
+
+    public void decreaseStock(int quantity) {
+        if (!tracksStock()) {
+            return;
+        }
+
+        if (quantity <= 0
+                || stockQuantity == null
+                || quantity > stockQuantity) {
+            throw new IllegalStateException(
+                    "Estoque insuficiente para concluir a operação."
+            );
+        }
+
+        stockQuantity -= quantity;
     }
 
     public void softDelete(Long actorUserId) {
         this.deletedAt = OffsetDateTime.now();
         this.deletedByUserId = actorUserId;
+    }
+
+    private void applyStockConfiguration(
+            CatalogEntryType type,
+            Integer stockQuantity,
+            Integer minimumStockQuantity
+    ) {
+        if (type == CatalogEntryType.SERVICE) {
+            this.stockQuantity = null;
+            this.minimumStockQuantity = null;
+            return;
+        }
+
+        if (stockQuantity == null
+                || minimumStockQuantity == null
+                || stockQuantity < 0
+                || minimumStockQuantity < 0) {
+            throw new IllegalArgumentException(
+                    "Itens precisam de estoque atual e estoque mínimo válidos."
+            );
+        }
+
+        this.stockQuantity = stockQuantity;
+        this.minimumStockQuantity = minimumStockQuantity;
     }
 }

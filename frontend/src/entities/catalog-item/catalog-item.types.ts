@@ -7,6 +7,8 @@ export type BarCatalogItem = {
   name: string;
   type: BarCatalogItemType;
   price: number;
+  stockQuantity: number | null;
+  minimumStockQuantity: number | null;
 };
 
 export type BarCatalogItemInput = Omit<

@@ -28,6 +28,26 @@ public record UpdateCatalogEntryRequest(
                 value = 99_999_999,
                 message = "O preço informado excede o limite permitido."
         )
-        Long priceCents
+        Long priceCents,
+
+        @Min(
+                value = 0,
+                message = "O estoque não pode ser negativo."
+        )
+        @Max(
+                value = 999_999,
+                message = "O estoque informado excede o limite permitido."
+        )
+        Integer stockQuantity,
+
+        @Min(
+                value = 0,
+                message = "O estoque mínimo não pode ser negativo."
+        )
+        @Max(
+                value = 999_999,
+                message = "O estoque mínimo informado excede o limite permitido."
+        )
+        Integer minimumStockQuantity
 ) {
 }

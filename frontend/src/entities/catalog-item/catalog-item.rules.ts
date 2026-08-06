@@ -6,22 +6,50 @@ import type {
 export function normalizeBarCatalogItemInput(
   input: BarCatalogItemInput
 ): BarCatalogItemInput {
+  const isItem = input.type === "ITEM";
+
   return {
     name: input.name.trim(),
     type: input.type,
     price: Math.max(0, input.price),
+    stockQuantity: isItem
+      ? Math.max(
+          0,
+          Math.floor(input.stockQuantity ?? 0)
+        )
+      : null,
+    minimumStockQuantity: isItem
+      ? Math.max(
+          0,
+          Math.floor(
+            input.minimumStockQuantity ?? 0
+          )
+        )
+      : null,
   };
 }
 
 export function isBarCatalogItemInputComplete(
   input: BarCatalogItemInput
 ): boolean {
+  const hasValidStock =
+    input.type === "SERVICE" ||
+    (
+      Number.isInteger(input.stockQuantity) &&
+      (input.stockQuantity ?? -1) >= 0 &&
+      Number.isInteger(
+        input.minimumStockQuantity
+      ) &&
+      (input.minimumStockQuantity ?? -1) >= 0
+    );
+
   return (
     input.name.trim().length > 0 &&
     (input.type === "ITEM" ||
       input.type === "SERVICE") &&
     Number.isFinite(input.price) &&
-    input.price > 0
+    input.price > 0 &&
+    hasValidStock
   );
 }
 

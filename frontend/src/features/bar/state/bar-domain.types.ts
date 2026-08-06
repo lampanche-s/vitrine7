@@ -42,6 +42,7 @@ export type BarDomainAction =
       payload: {
         commandId: number;
         historyEntry: BarSaleHistoryEntry;
+        catalogEntries: BarCatalogItem[] | null;
       };
     }
   | {

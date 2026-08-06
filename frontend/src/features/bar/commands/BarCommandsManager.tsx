@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import {
+  Bell,
   Check,
   CircleDollarSign,
   Minus,
@@ -82,6 +83,8 @@ type CommandCatalogProduct = {
   name: string;
   type: "ITEM" | "SERVICE";
   price: number;
+  stockQuantity: number | null;
+  minimumStockQuantity: number | null;
 };
 
 const commandPaymentMethods: BarPaymentMethod[] = [
@@ -156,6 +159,9 @@ export function BarCommandsManager({
   );
 
   const [isCreateModalOpen, setIsCreateModalOpen] =
+    useState(false);
+
+  const [isStockAlertsOpen, setIsStockAlertsOpen] =
     useState(false);
 
   const [isCloseModalOpen, setIsCloseModalOpen] =
@@ -238,9 +244,44 @@ export function BarCommandsManager({
         name: entry.name,
         type: entry.type,
         price: entry.price,
+        stockQuantity: entry.stockQuantity,
+        minimumStockQuantity:
+          entry.minimumStockQuantity,
       })),
       [catalogEntries]
     );
+
+  const stockAlertItems = useMemo(
+    () =>
+      catalogEntries
+        .filter(
+          (entry) =>
+            entry.type === "ITEM" &&
+            (entry.stockQuantity ?? 0) <=
+              (entry.minimumStockQuantity ?? 0)
+        )
+        .sort((left, right) => {
+          const quantityDifference =
+            (left.stockQuantity ?? 0) -
+            (right.stockQuantity ?? 0);
+
+          return quantityDifference !== 0
+            ? quantityDifference
+            : left.name.localeCompare(
+                right.name,
+                "pt-BR"
+              );
+        }),
+    [catalogEntries]
+  );
+
+  const zeroStockItems = stockAlertItems.filter(
+    (entry) => (entry.stockQuantity ?? 0) === 0
+  );
+
+  const lowStockItems = stockAlertItems.filter(
+    (entry) => (entry.stockQuantity ?? 0) > 0
+  );
 
   const filteredCommands = useMemo(() => {
     const normalizedSearch =
@@ -378,6 +419,19 @@ export function BarCommandsManager({
   async function handleAddProduct(
     product: CommandCatalogProduct
   ) {
+    if (
+      product.type === "ITEM" &&
+      (product.stockQuantity ?? 0) <= 0
+    ) {
+      showErrorToast(
+        new Error(
+          `O item ${product.name} está sem estoque.`
+        ),
+        { title: "Estoque zerado" }
+      );
+      return;
+    }
+
     if (!selectedCommand) {
       return;
     }
@@ -620,6 +674,23 @@ export function BarCommandsManager({
           >
             Nova comanda
           </Button>
+
+          <button
+            type="button"
+            onClick={() => setIsStockAlertsOpen(true)}
+            className="v7-motion-fast v7-pressable relative grid h-[var(--control-height)] w-[var(--control-height)] place-items-center rounded-[var(--control-radius)] border border-[var(--border-subtle)] bg-[var(--surface-raised)] text-[var(--text-base)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]"
+            aria-label={`Alertas de estoque: ${stockAlertItems.length}`}
+            title="Alertas de estoque"
+          >
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            {stockAlertItems.length > 0 ? (
+              <span className="absolute -right-1.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-[var(--color-danger)] px-1 text-[10px] font-bold text-white">
+                {stockAlertItems.length > 99
+                  ? "99+"
+                  : stockAlertItems.length}
+              </span>
+            ) : null}
+          </button>
         </PageActions>
 
         <div className="mt-4 w-full shrink-0">
@@ -759,12 +830,16 @@ export function BarCommandsManager({
                             <button
                               key={product.id}
                               type="button"
+                              disabled={
+                                product.type === "ITEM" &&
+                                (product.stockQuantity ?? 0) <= 0
+                              }
                               onClick={() =>
                                 void handleAddProduct(
                                   product
                                 )
                               }
-                              className="flex min-h-14 w-full items-center justify-between gap-4 rounded-[3px] px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)]"
+                              className="flex min-h-14 w-full items-center justify-between gap-4 rounded-[3px] px-3 py-2 text-left transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-45"
                             >
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-[var(--text-base)]">
@@ -774,7 +849,7 @@ export function BarCommandsManager({
                                 <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                                   {product.type === "SERVICE"
                                     ? "Serviço"
-                                    : "Item"}
+                                    : `Item · Estoque ${product.stockQuantity ?? 0}`}
                                 </p>
                               </div>
 
@@ -783,11 +858,18 @@ export function BarCommandsManager({
                                   {formatBrlCurrency(product.price)}
                                 </span>
 
-                                <span className="grid h-8 w-8 place-items-center rounded-[4px] border border-[var(--border-subtle)] text-[var(--text-base)]">
-                                  <Plus
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                  />
+                                <span className="grid h-8 min-w-8 place-items-center rounded-[4px] border border-[var(--border-subtle)] px-2 text-[var(--text-base)]">
+                                  {product.type === "ITEM" &&
+                                  (product.stockQuantity ?? 0) <= 0 ? (
+                                    <span className="text-[10px] font-semibold text-[var(--color-danger)]">
+                                      Zerado
+                                    </span>
+                                  ) : (
+                                    <Plus
+                                      className="h-4 w-4"
+                                      aria-hidden="true"
+                                    />
+                                  )}
                                 </span>
                               </div>
                             </button>
@@ -1051,6 +1133,90 @@ export function BarCommandsManager({
           )}
         </div>
       </section>
+
+
+      <AnimatedModal
+        open={isStockAlertsOpen}
+        onClose={() => setIsStockAlertsOpen(false)}
+        labelledBy="stock-alerts-title"
+        backdropClassName="z-[230] p-4"
+        panelClassName="w-full max-w-lg overflow-hidden rounded-[var(--panel-radius)] border border-[var(--border-soft)] bg-[var(--surface-card)] p-[var(--panel-padding)] shadow-[var(--shadow-modal)]"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3
+              id="stock-alerts-title"
+              className="text-lg font-semibold text-[var(--text-base)]"
+            >
+              Alertas de estoque
+            </h3>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Itens zerados ou no limite mínimo configurado.
+            </p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            leadingIcon={<X />}
+            aria-label="Fechar alertas"
+            onClick={() => setIsStockAlertsOpen(false)}
+          />
+        </div>
+
+        <div className="v7-list-scroll premium-scroll mt-4 max-h-[420px] space-y-5 overflow-y-auto pr-1">
+          {stockAlertItems.length === 0 ? (
+            <div className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] px-4 py-5 text-center text-sm text-[var(--text-muted)]">
+              Nenhum item com estoque baixo.
+            </div>
+          ) : null}
+
+          {zeroStockItems.length > 0 ? (
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-danger)]">
+                Estoque zerado
+              </h4>
+              <div className="mt-2 divide-y divide-[var(--border-subtle)] rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] px-3">
+                {zeroStockItems.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <span className="truncate text-sm font-medium text-[var(--text-base)]">
+                      {entry.name}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-[var(--color-danger)]">
+                      0 disponíveis
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {lowStockItems.length > 0 ? (
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                Estoque baixo
+              </h4>
+              <div className="mt-2 divide-y divide-[var(--border-subtle)] rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] px-3">
+                {lowStockItems.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <span className="truncate text-sm font-medium text-[var(--text-base)]">
+                      {entry.name}
+                    </span>
+                    <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                      {entry.stockQuantity ?? 0} disponíveis · mínimo {entry.minimumStockQuantity ?? 0}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
+      </AnimatedModal>
 
       <AnimatedModal
         open={isCreateModalOpen}

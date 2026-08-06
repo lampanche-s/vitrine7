@@ -39,6 +39,7 @@ export type BarHistoryPageResult = {
 export type CloseBarCommandRepositoryResult = {
   closedCommand: BarCommand;
   historyEntry: BarSaleHistoryEntry;
+  catalogEntries: BarCatalogItem[] | null;
 };
 
 export interface BarRepository {

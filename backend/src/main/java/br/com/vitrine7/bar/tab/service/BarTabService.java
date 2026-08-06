@@ -35,7 +35,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -188,6 +191,11 @@ public class BarTabService {
                         catalogEntryId
                 );
 
+        validateAvailableStock(
+                entry,
+                request.quantity()
+        );
+
         return upsertResolvedCatalogEntry(
                 tabId,
                 entry,
@@ -305,10 +313,41 @@ public class BarTabService {
             );
         }
 
+        Map<Long, CatalogEntryEntity> entriesById =
+                catalogEntryRepository
+                        .findAllById(
+                                lines.stream()
+                                        .map(BarTabLineEntity::getCatalogEntryId)
+                                        .distinct()
+                                        .toList()
+                        )
+                        .stream()
+                        .filter(entry -> entry.getDeletedAt() == null)
+                        .collect(Collectors.toMap(
+                                CatalogEntryEntity::getId,
+                                Function.identity()
+                        ));
+
         long subtotal = 0L;
 
         try {
             for (BarTabLineEntity line : lines) {
+                CatalogEntryEntity entry = entriesById.get(
+                        line.getCatalogEntryId()
+                );
+
+                if (entry == null) {
+                    throw new BusinessException(
+                            "CATALOG_ENTRY_NOT_FOUND",
+                            "Um item ou serviço da comanda não está mais disponível."
+                    );
+                }
+
+                validateAvailableStock(
+                        entry,
+                        line.getQuantity()
+                );
+
                 line.recalculate();
 
                 subtotal = Math.addExact(
@@ -386,6 +425,37 @@ public class BarTabService {
 
 
         return new OperationResult(buildResponse(tab), false);
+    }
+
+    private void validateAvailableStock(
+            CatalogEntryEntity entry,
+            int requestedQuantity
+    ) {
+        if (!entry.tracksStock()) {
+            return;
+        }
+
+        int available = entry.getStockQuantity() == null
+                ? 0
+                : entry.getStockQuantity();
+
+        if (available == 0) {
+            throw new BusinessException(
+                    "CATALOG_ENTRY_OUT_OF_STOCK",
+                    "O item " + entry.getName() + " está sem estoque."
+            );
+        }
+
+        if (!entry.hasAvailableStock(requestedQuantity)) {
+            throw new BusinessException(
+                    "CATALOG_ENTRY_INSUFFICIENT_STOCK",
+                    "Estoque insuficiente para "
+                            + entry.getName()
+                            + ". Disponível: "
+                            + available
+                            + "."
+            );
+        }
     }
 
     private CatalogEntryEntity getAvailableCatalogEntry(

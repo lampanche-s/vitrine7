@@ -32,6 +32,8 @@ public class CatalogEntryService {
                     "name",
                     "type",
                     "priceCents",
+                    "stockQuantity",
+                    "minimumStockQuantity",
                     "createdAt",
                     "updatedAt"
             );
@@ -41,6 +43,8 @@ public class CatalogEntryService {
                     "name", "name",
                     "type", "entryType",
                     "priceCents", "priceCents",
+                    "stockQuantity", "stockQuantity",
+                    "minimumStockQuantity", "minimumStockQuantity",
                     "createdAt", "createdAt",
                     "updatedAt", "updatedAt"
             );
@@ -108,12 +112,20 @@ public class CatalogEntryService {
                 null
         );
 
+        StockConfiguration stock = resolveStockConfiguration(
+                request.type(),
+                request.stockQuantity(),
+                request.minimumStockQuantity()
+        );
+
         CatalogEntryEntity entry =
                 CatalogEntryEntity.create(
                         request.type(),
                         normalized.name(),
                         normalized.normalizedName(),
-                        request.priceCents()
+                        request.priceCents(),
+                        stock.stockQuantity(),
+                        stock.minimumStockQuantity()
                 );
 
         try {
@@ -143,11 +155,19 @@ public class CatalogEntryService {
                 id
         );
 
+        StockConfiguration stock = resolveStockConfiguration(
+                request.type(),
+                request.stockQuantity(),
+                request.minimumStockQuantity()
+        );
+
         entry.update(
                 request.type(),
                 normalized.name(),
                 normalized.normalizedName(),
-                request.priceCents()
+                request.priceCents(),
+                stock.stockQuantity(),
+                stock.minimumStockQuantity()
         );
 
         try {
@@ -212,6 +232,36 @@ public class CatalogEntryService {
                 "CATALOG_ENTRY_ALREADY_EXISTS",
                 "Já existe um cadastro disponível com esse tipo e nome."
         );
+    }
+
+
+    private StockConfiguration resolveStockConfiguration(
+            CatalogEntryType type,
+            Integer stockQuantity,
+            Integer minimumStockQuantity
+    ) {
+        if (type == CatalogEntryType.SERVICE) {
+            return new StockConfiguration(null, null);
+        }
+
+        if (stockQuantity == null
+                || minimumStockQuantity == null) {
+            throw new InvalidRequestException(
+                    "CATALOG_STOCK_REQUIRED",
+                    "Informe o estoque atual e o estoque mínimo do item."
+            );
+        }
+
+        return new StockConfiguration(
+                stockQuantity,
+                minimumStockQuantity
+        );
+    }
+
+    private record StockConfiguration(
+            Integer stockQuantity,
+            Integer minimumStockQuantity
+    ) {
     }
 
     private String parseSortField(String sort) {

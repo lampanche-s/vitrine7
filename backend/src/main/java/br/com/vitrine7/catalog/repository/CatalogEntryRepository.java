@@ -2,9 +2,15 @@ package br.com.vitrine7.catalog.repository;
 
 import br.com.vitrine7.catalog.entity.CatalogEntryEntity;
 import br.com.vitrine7.catalog.entity.CatalogEntryType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface CatalogEntryRepository extends
@@ -13,6 +19,18 @@ public interface CatalogEntryRepository extends
 
     Optional<CatalogEntryEntity>
     findByIdAndDeletedAtIsNull(Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT entry
+            FROM CatalogEntryEntity entry
+            WHERE entry.id IN :ids
+              AND entry.deletedAt IS NULL
+            ORDER BY entry.id
+            """)
+    List<CatalogEntryEntity> findAllAvailableByIdForUpdate(
+            @Param("ids") Collection<Long> ids
+    );
 
     Optional<CatalogEntryEntity>
     findByEntryTypeAndNormalizedNameAndDeletedAtIsNull(

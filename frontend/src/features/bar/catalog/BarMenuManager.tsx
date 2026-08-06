@@ -48,12 +48,16 @@ type CatalogForm = {
   name: string;
   type: BarCatalogItemType;
   price: string;
+  stockQuantity: string;
+  minimumStockQuantity: string;
 };
 
 const emptyCatalogForm: CatalogForm = {
   name: "",
   type: "ITEM",
   price: "",
+  stockQuantity: "0",
+  minimumStockQuantity: "0",
 };
 
 const CATALOG_RECORDS_PAGE_SIZE = 7;
@@ -182,6 +186,14 @@ export function BarMenuManager({
       name: entry.name,
       type: entry.type,
       price: formatBrlCurrency(entry.price),
+      stockQuantity:
+        entry.stockQuantity === null
+          ? "0"
+          : String(entry.stockQuantity),
+      minimumStockQuantity:
+        entry.minimumStockQuantity === null
+          ? "0"
+          : String(entry.minimumStockQuantity),
     });
     setFormError("");
     setIsModalOpen(true);
@@ -200,11 +212,21 @@ export function BarMenuManager({
         price: currencyInputToNumber(
           form.price
         ),
+        stockQuantity:
+          form.type === "ITEM"
+            ? Number(form.stockQuantity)
+            : null,
+        minimumStockQuantity:
+          form.type === "ITEM"
+            ? Number(
+                form.minimumStockQuantity
+              )
+            : null,
       });
 
     if (!isBarCatalogItemInputComplete(input)) {
       setFormError(
-        "Informe o nome, o tipo e um preço válido."
+        "Informe nome, tipo, preço e estoque válidos."
       );
       return;
     }
@@ -295,6 +317,13 @@ export function BarMenuManager({
                       {" · "}
                       {formatBrlCurrency(entry.price)}
                     </p>
+                    {entry.type === "ITEM" ? (
+                      <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                        Estoque: {entry.stockQuantity ?? 0}
+                        {" · "}
+                        Mínimo: {entry.minimumStockQuantity ?? 0}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -407,6 +436,35 @@ export function BarMenuManager({
               )
             }
           />
+
+          {form.type === "ITEM" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="Estoque atual"
+                type="number"
+                value={form.stockQuantity}
+                placeholder="0"
+                onChange={(value) =>
+                  updateForm(
+                    "stockQuantity",
+                    value
+                  )
+                }
+              />
+              <TextField
+                label="Estoque mínimo"
+                type="number"
+                value={form.minimumStockQuantity}
+                placeholder="0"
+                onChange={(value) =>
+                  updateForm(
+                    "minimumStockQuantity",
+                    value
+                  )
+                }
+              />
+            </div>
+          ) : null}
           {formError ? (
             <div
               className="rounded-[var(--control-radius)] border border-[var(--color-danger-border)] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]"

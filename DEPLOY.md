@@ -47,7 +47,7 @@ release/vitrine7-release.zip
 
 ```bash
 sudo systemctl stop vitrine7-backend.service
-sudo -u postgres pg_dump -Fc vitrine7_db > /opt/vitrine7/backup-pre-v40.dump
+sudo -u postgres pg_dump -Fc vitrine7_db > /opt/vitrine7/backup-pre-v41.dump
 sudo cp /opt/vitrine7/backend/vitrine7-backend.jar /opt/vitrine7/backend/vitrine7-backend.jar.rollback
 sudo cp -a /opt/vitrine7/frontend /opt/vitrine7/frontend.rollback
 ```
@@ -80,7 +80,7 @@ O backup baixado pela tela de Relatórios contém o banco completo, incluindo us
 
 ## Rollback
 
-A V40 altera somente estados e constraints de pagamento. Em caso de falha grave:
+A V41 adiciona o estoque simplificado ao catálogo. Em caso de falha grave:
 
 ```bash
 sudo systemctl stop vitrine7-backend.service
@@ -89,7 +89,7 @@ sudo rm -rf /opt/vitrine7/frontend/*
 sudo cp -a /opt/vitrine7/frontend.rollback/. /opt/vitrine7/frontend/
 sudo -u postgres dropdb --if-exists vitrine7_db
 sudo -u postgres createdb vitrine7_db
-sudo -u postgres pg_restore -d vitrine7_db /opt/vitrine7/backup-pre-v40.dump
+sudo -u postgres pg_restore -d vitrine7_db /opt/vitrine7/backup-pre-v41.dump
 sudo systemctl start vitrine7-backend.service
 sudo systemctl reload nginx
 ```
