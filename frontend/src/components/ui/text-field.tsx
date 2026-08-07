@@ -5,6 +5,9 @@ export function TextField({
   placeholder,
   type = "text",
   disabled = false,
+  min,
+  max,
+  step,
   className = "",
 }: {
   label?: string;
@@ -19,6 +22,9 @@ export function TextField({
     | "tel"
     | "date";
   disabled?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
   className?: string;
 }) {
   return (
@@ -33,6 +39,9 @@ export function TextField({
         type={type}
         value={value}
         disabled={disabled}
+        min={min}
+        max={max}
+        step={step}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         className={[

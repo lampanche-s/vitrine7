@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import {
+  AdminToggle,
   AnimatedModal,
   Button,
   ContentStack,
@@ -48,6 +49,7 @@ type CatalogForm = {
   name: string;
   type: BarCatalogItemType;
   price: string;
+  stockEnabled: boolean;
   stockQuantity: string;
   minimumStockQuantity: string;
 };
@@ -56,6 +58,7 @@ const emptyCatalogForm: CatalogForm = {
   name: "",
   type: "ITEM",
   price: "",
+  stockEnabled: false,
   stockQuantity: "0",
   minimumStockQuantity: "0",
 };
@@ -157,13 +160,67 @@ export function BarMenuManager({
     );
 
   function updateForm(
-    field: keyof CatalogForm,
+    field: Exclude<
+      keyof CatalogForm,
+      "stockEnabled"
+    >,
     value: string
   ) {
     setFormError("");
     setForm((current) => ({
       ...current,
       [field]: value,
+    }));
+  }
+
+  function updateStockForm(
+    field:
+      | "stockQuantity"
+      | "minimumStockQuantity",
+    value: string
+  ) {
+    if (value === "") {
+      updateForm(field, "");
+      return;
+    }
+
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed)) {
+      updateForm(field, "0");
+      return;
+    }
+
+    updateForm(
+      field,
+      String(
+        Math.min(
+          999_999,
+          Math.max(0, Math.floor(parsed))
+        )
+      )
+    );
+  }
+
+  function setCatalogType(
+    type: BarCatalogItemType
+  ) {
+    setFormError("");
+    setForm((current) => ({
+      ...current,
+      type,
+      stockEnabled:
+        type === "ITEM"
+          ? current.stockEnabled
+          : false,
+    }));
+  }
+
+  function toggleStockControl() {
+    setFormError("");
+    setForm((current) => ({
+      ...current,
+      stockEnabled: !current.stockEnabled,
     }));
   }
 
@@ -186,6 +243,7 @@ export function BarMenuManager({
       name: entry.name,
       type: entry.type,
       price: formatBrlCurrency(entry.price),
+      stockEnabled: entry.stockEnabled,
       stockQuantity:
         entry.stockQuantity === null
           ? "0"
@@ -212,12 +270,17 @@ export function BarMenuManager({
         price: currencyInputToNumber(
           form.price
         ),
+        stockEnabled:
+          form.type === "ITEM" &&
+          form.stockEnabled,
         stockQuantity:
-          form.type === "ITEM"
+          form.type === "ITEM" &&
+          form.stockEnabled
             ? Number(form.stockQuantity)
             : null,
         minimumStockQuantity:
-          form.type === "ITEM"
+          form.type === "ITEM" &&
+          form.stockEnabled
             ? Number(
                 form.minimumStockQuantity
               )
@@ -319,9 +382,9 @@ export function BarMenuManager({
                     </p>
                     {entry.type === "ITEM" ? (
                       <p className="mt-1 text-xs text-[var(--text-subtle)]">
-                        Estoque: {entry.stockQuantity ?? 0}
-                        {" · "}
-                        Mínimo: {entry.minimumStockQuantity ?? 0}
+                        {entry.stockEnabled
+                          ? `Estoque: ${entry.stockQuantity ?? 0} · Mínimo: ${entry.minimumStockQuantity ?? 0}`
+                          : "Controle de estoque desativado"}
                       </p>
                     ) : null}
                   </div>
@@ -416,8 +479,7 @@ export function BarMenuManager({
               { value: "SERVICE", label: "Serviço" },
             ]}
             onChange={(value) =>
-              updateForm(
-                "type",
+              setCatalogType(
                 value === "SERVICE"
                   ? "SERVICE"
                   : "ITEM"
@@ -438,14 +500,27 @@ export function BarMenuManager({
           />
 
           {form.type === "ITEM" ? (
+            <AdminToggle
+              title="Controlar estoque"
+              text="Ative para limitar vendas e receber alertas de estoque baixo."
+              checked={form.stockEnabled}
+              onClick={toggleStockControl}
+            />
+          ) : null}
+
+          {form.type === "ITEM" &&
+          form.stockEnabled ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <TextField
                 label="Estoque atual"
                 type="number"
                 value={form.stockQuantity}
                 placeholder="0"
+                min={0}
+                max={999_999}
+                step={1}
                 onChange={(value) =>
-                  updateForm(
+                  updateStockForm(
                     "stockQuantity",
                     value
                   )
@@ -456,8 +531,11 @@ export function BarMenuManager({
                 type="number"
                 value={form.minimumStockQuantity}
                 placeholder="0"
+                min={0}
+                max={999_999}
+                step={1}
                 onChange={(value) =>
-                  updateForm(
+                  updateStockForm(
                     "minimumStockQuantity",
                     value
                   )

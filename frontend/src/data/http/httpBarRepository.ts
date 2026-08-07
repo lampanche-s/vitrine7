@@ -55,6 +55,7 @@ type CatalogEntryResponse = {
   name: string;
   type: "ITEM" | "SERVICE";
   priceCents: number;
+  stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
   createdAt: string;
@@ -236,6 +237,7 @@ function mapCatalogEntry(
     name: entry.name,
     type: entry.type,
     price: entry.priceCents / 100,
+    stockEnabled: entry.stockEnabled,
     stockQuantity: entry.stockQuantity,
     minimumStockQuantity:
       entry.minimumStockQuantity,
@@ -299,6 +301,7 @@ function catalogEntryPayload(input: {
   name: string;
   type: "ITEM" | "SERVICE";
   price: number;
+  stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
 }) {
@@ -307,12 +310,17 @@ function catalogEntryPayload(input: {
     type: input.type,
     priceCents:
       Math.round(input.price * 100),
+    stockEnabled:
+      input.type === "ITEM" &&
+      input.stockEnabled,
     stockQuantity:
-      input.type === "ITEM"
+      input.type === "ITEM" &&
+      input.stockEnabled
         ? input.stockQuantity
         : null,
     minimumStockQuantity:
-      input.type === "ITEM"
+      input.type === "ITEM" &&
+      input.stockEnabled
         ? input.minimumStockQuantity
         : null,
   };

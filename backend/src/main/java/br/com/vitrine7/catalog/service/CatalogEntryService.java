@@ -114,6 +114,7 @@ public class CatalogEntryService {
 
         StockConfiguration stock = resolveStockConfiguration(
                 request.type(),
+                request.stockEnabled(),
                 request.stockQuantity(),
                 request.minimumStockQuantity()
         );
@@ -124,6 +125,7 @@ public class CatalogEntryService {
                         normalized.name(),
                         normalized.normalizedName(),
                         request.priceCents(),
+                        stock.enabled(),
                         stock.stockQuantity(),
                         stock.minimumStockQuantity()
                 );
@@ -157,6 +159,7 @@ public class CatalogEntryService {
 
         StockConfiguration stock = resolveStockConfiguration(
                 request.type(),
+                request.stockEnabled(),
                 request.stockQuantity(),
                 request.minimumStockQuantity()
         );
@@ -166,6 +169,7 @@ public class CatalogEntryService {
                 normalized.name(),
                 normalized.normalizedName(),
                 request.priceCents(),
+                stock.enabled(),
                 stock.stockQuantity(),
                 stock.minimumStockQuantity()
         );
@@ -237,11 +241,17 @@ public class CatalogEntryService {
 
     private StockConfiguration resolveStockConfiguration(
             CatalogEntryType type,
+            boolean stockEnabled,
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {
-        if (type == CatalogEntryType.SERVICE) {
-            return new StockConfiguration(null, null);
+        if (type == CatalogEntryType.SERVICE
+                || !stockEnabled) {
+            return new StockConfiguration(
+                    false,
+                    null,
+                    null
+            );
         }
 
         if (stockQuantity == null
@@ -253,12 +263,14 @@ public class CatalogEntryService {
         }
 
         return new StockConfiguration(
+                true,
                 stockQuantity,
                 minimumStockQuantity
         );
     }
 
     private record StockConfiguration(
+            boolean enabled,
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {

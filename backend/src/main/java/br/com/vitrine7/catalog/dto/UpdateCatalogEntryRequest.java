@@ -30,6 +30,8 @@ public record UpdateCatalogEntryRequest(
         )
         Long priceCents,
 
+        boolean stockEnabled,
+
         @Min(
                 value = 0,
                 message = "O estoque não pode ser negativo."

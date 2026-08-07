@@ -7,6 +7,7 @@ export type BarCatalogItem = {
   name: string;
   type: BarCatalogItemType;
   price: number;
+  stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
 };

@@ -6,19 +6,22 @@ import type {
 export function normalizeBarCatalogItemInput(
   input: BarCatalogItemInput
 ): BarCatalogItemInput {
-  const isItem = input.type === "ITEM";
+  const tracksStock =
+    input.type === "ITEM" &&
+    input.stockEnabled;
 
   return {
     name: input.name.trim(),
     type: input.type,
     price: Math.max(0, input.price),
-    stockQuantity: isItem
+    stockEnabled: tracksStock,
+    stockQuantity: tracksStock
       ? Math.max(
           0,
           Math.floor(input.stockQuantity ?? 0)
         )
       : null,
-    minimumStockQuantity: isItem
+    minimumStockQuantity: tracksStock
       ? Math.max(
           0,
           Math.floor(
@@ -34,6 +37,7 @@ export function isBarCatalogItemInputComplete(
 ): boolean {
   const hasValidStock =
     input.type === "SERVICE" ||
+    !input.stockEnabled ||
     (
       Number.isInteger(input.stockQuantity) &&
       (input.stockQuantity ?? -1) >= 0 &&

@@ -54,6 +54,12 @@ public class CatalogEntryEntity {
     )
     private Long priceCents;
 
+    @Column(
+            name = "stock_enabled",
+            nullable = false
+    )
+    private boolean stockEnabled;
+
     @Column(name = "stock_quantity")
     private Integer stockQuantity;
 
@@ -90,6 +96,7 @@ public class CatalogEntryEntity {
             String name,
             String normalizedName,
             Long priceCents,
+            boolean stockEnabled,
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {
@@ -102,6 +109,7 @@ public class CatalogEntryEntity {
         entry.priceCents = priceCents;
         entry.applyStockConfiguration(
                 entryType,
+                stockEnabled,
                 stockQuantity,
                 minimumStockQuantity
         );
@@ -114,6 +122,7 @@ public class CatalogEntryEntity {
             String name,
             String normalizedName,
             Long priceCents,
+            boolean stockEnabled,
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {
@@ -123,13 +132,15 @@ public class CatalogEntryEntity {
         this.priceCents = priceCents;
         applyStockConfiguration(
                 entryType,
+                stockEnabled,
                 stockQuantity,
                 minimumStockQuantity
         );
     }
 
     public boolean tracksStock() {
-        return entryType == CatalogEntryType.ITEM;
+        return entryType == CatalogEntryType.ITEM
+                && stockEnabled;
     }
 
     public boolean hasAvailableStock(int requestedQuantity) {
@@ -163,10 +174,13 @@ public class CatalogEntryEntity {
 
     private void applyStockConfiguration(
             CatalogEntryType type,
+            boolean stockEnabled,
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {
-        if (type == CatalogEntryType.SERVICE) {
+        if (type == CatalogEntryType.SERVICE
+                || !stockEnabled) {
+            this.stockEnabled = false;
             this.stockQuantity = null;
             this.minimumStockQuantity = null;
             return;
@@ -181,6 +195,7 @@ public class CatalogEntryEntity {
             );
         }
 
+        this.stockEnabled = true;
         this.stockQuantity = stockQuantity;
         this.minimumStockQuantity = minimumStockQuantity;
     }

@@ -65,6 +65,7 @@ describe("httpBarRepository", () => {
               name: "Lavagem expressa",
               type: "SERVICE",
               priceCents: 2500,
+              stockEnabled: false,
               stockQuantity: null,
               minimumStockQuantity: null,
             },
@@ -94,6 +95,7 @@ describe("httpBarRepository", () => {
           name: "Lavagem expressa",
           type: "SERVICE",
           price: 25,
+          stockEnabled: false,
           stockQuantity: null,
           minimumStockQuantity: null,
         },
@@ -108,6 +110,7 @@ describe("httpBarRepository", () => {
       name: "Espeto bovino",
       type: "ITEM",
       priceCents: 2490,
+      stockEnabled: true,
       stockQuantity: 20,
       minimumStockQuantity: 5,
     });
@@ -116,6 +119,7 @@ describe("httpBarRepository", () => {
       name: "Espeto bovino especial",
       type: "ITEM",
       priceCents: 2690,
+      stockEnabled: true,
       stockQuantity: 18,
       minimumStockQuantity: 5,
     });
@@ -127,6 +131,7 @@ describe("httpBarRepository", () => {
       name: "Espeto bovino",
       type: "ITEM",
       price: 24.9,
+      stockEnabled: true,
       stockQuantity: 20,
       minimumStockQuantity: 5,
     });
@@ -137,6 +142,7 @@ describe("httpBarRepository", () => {
           name: "Espeto bovino especial",
           type: "ITEM",
           price: 26.9,
+          stockEnabled: true,
           stockQuantity: 18,
           minimumStockQuantity: 5,
         }
@@ -149,6 +155,7 @@ describe("httpBarRepository", () => {
         name: "Espeto bovino",
         type: "ITEM",
         priceCents: 2490,
+        stockEnabled: true,
         stockQuantity: 20,
         minimumStockQuantity: 5,
       }
@@ -157,6 +164,45 @@ describe("httpBarRepository", () => {
     expect(httpClient.delete).toHaveBeenCalledWith(
       "/catalog/9"
     );
+  });
+
+  it("envia estoque nulo quando o controle está desligado", async () => {
+    httpClient.post.mockResolvedValueOnce({
+      id: 10,
+      name: "Produto livre",
+      type: "ITEM",
+      priceCents: 1500,
+      stockEnabled: false,
+      stockQuantity: null,
+      minimumStockQuantity: null,
+    });
+
+    const { httpBarRepository } =
+      await import("./httpBarRepository");
+
+    const created =
+      await httpBarRepository.createCatalogEntry({
+        name: "Produto livre",
+        type: "ITEM",
+        price: 15,
+        stockEnabled: false,
+        stockQuantity: null,
+        minimumStockQuantity: null,
+      });
+
+    expect(httpClient.post).toHaveBeenCalledWith(
+      "/catalog",
+      {
+        name: "Produto livre",
+        type: "ITEM",
+        priceCents: 1500,
+        stockEnabled: false,
+        stockQuantity: null,
+        minimumStockQuantity: null,
+      }
+    );
+    expect(created.stockEnabled).toBe(false);
+    expect(created.stockQuantity).toBeNull();
   });
 
   it("adiciona entrada do catálogo à comanda", async () => {
@@ -216,6 +262,7 @@ describe("httpBarRepository", () => {
             name: "Espeto",
             type: "ITEM",
             priceCents: 1200,
+            stockEnabled: true,
             stockQuantity: 9,
             minimumStockQuantity: 3,
           },
@@ -260,6 +307,7 @@ describe("httpBarRepository", () => {
     });
     expect(result.catalogEntries?.[0]).toMatchObject({
       id: 5,
+      stockEnabled: true,
       stockQuantity: 9,
       minimumStockQuantity: 3,
     });

@@ -16,6 +16,7 @@ describe("catalog-item.rules", () => {
         name: "  Espeto bovino  ",
         type: "ITEM",
         price: 18,
+        stockEnabled: true,
         stockQuantity: 10.9,
         minimumStockQuantity: 2.8,
       })
@@ -23,6 +24,7 @@ describe("catalog-item.rules", () => {
       name: "Espeto bovino",
       type: "ITEM",
       price: 18,
+      stockEnabled: true,
       stockQuantity: 10,
       minimumStockQuantity: 2,
     });
@@ -34,22 +36,53 @@ describe("catalog-item.rules", () => {
         name: "Lavagem",
         type: "SERVICE",
         price: 30,
+        stockEnabled: true,
         stockQuantity: 20,
         minimumStockQuantity: 5,
       })
     ).toMatchObject({
       type: "SERVICE",
+      stockEnabled: false,
       stockQuantity: null,
       minimumStockQuantity: null,
     });
   });
 
-  it("exige estoque para item", () => {
+  it("remove estoque quando o controle está desligado", () => {
+    expect(
+      normalizeBarCatalogItemInput({
+        name: "Produto livre",
+        type: "ITEM",
+        price: 12,
+        stockEnabled: false,
+        stockQuantity: -20,
+        minimumStockQuantity: -5,
+      })
+    ).toMatchObject({
+      stockEnabled: false,
+      stockQuantity: null,
+      minimumStockQuantity: null,
+    });
+
+    expect(
+      isBarCatalogItemInputComplete({
+        name: "Produto livre",
+        type: "ITEM",
+        price: 12,
+        stockEnabled: false,
+        stockQuantity: null,
+        minimumStockQuantity: null,
+      })
+    ).toBe(true);
+  });
+
+  it("exige estoque para item com controle ativo", () => {
     expect(
       isBarCatalogItemInputComplete({
         name: "Espeto",
         type: "ITEM",
         price: 18,
+        stockEnabled: true,
         stockQuantity: null,
         minimumStockQuantity: 2,
       })

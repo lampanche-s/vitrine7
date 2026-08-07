@@ -83,6 +83,7 @@ type CommandCatalogProduct = {
   name: string;
   type: "ITEM" | "SERVICE";
   price: number;
+  stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
 };
@@ -244,6 +245,7 @@ export function BarCommandsManager({
         name: entry.name,
         type: entry.type,
         price: entry.price,
+        stockEnabled: entry.stockEnabled,
         stockQuantity: entry.stockQuantity,
         minimumStockQuantity:
           entry.minimumStockQuantity,
@@ -257,6 +259,7 @@ export function BarCommandsManager({
         .filter(
           (entry) =>
             entry.type === "ITEM" &&
+            entry.stockEnabled &&
             (entry.stockQuantity ?? 0) <=
               (entry.minimumStockQuantity ?? 0)
         )
@@ -421,6 +424,7 @@ export function BarCommandsManager({
   ) {
     if (
       product.type === "ITEM" &&
+      product.stockEnabled &&
       (product.stockQuantity ?? 0) <= 0
     ) {
       showErrorToast(
@@ -832,6 +836,7 @@ export function BarCommandsManager({
                               type="button"
                               disabled={
                                 product.type === "ITEM" &&
+                                product.stockEnabled &&
                                 (product.stockQuantity ?? 0) <= 0
                               }
                               onClick={() =>
@@ -849,7 +854,9 @@ export function BarCommandsManager({
                                 <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                                   {product.type === "SERVICE"
                                     ? "Serviço"
-                                    : `Item · Estoque ${product.stockQuantity ?? 0}`}
+                                    : product.stockEnabled
+                                      ? `Item · Estoque ${product.stockQuantity ?? 0}`
+                                      : "Item · Estoque não controlado"}
                                 </p>
                               </div>
 
@@ -860,6 +867,7 @@ export function BarCommandsManager({
 
                                 <span className="grid h-8 min-w-8 place-items-center rounded-[4px] border border-[var(--border-subtle)] px-2 text-[var(--text-base)]">
                                   {product.type === "ITEM" &&
+                                  product.stockEnabled &&
                                   (product.stockQuantity ?? 0) <= 0 ? (
                                     <span className="text-[10px] font-semibold text-[var(--color-danger)]">
                                       Zerado

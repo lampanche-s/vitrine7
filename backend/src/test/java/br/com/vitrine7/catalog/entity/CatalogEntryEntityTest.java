@@ -17,6 +17,7 @@ class CatalogEntryEntityTest {
                 "Espeto bovino",
                 "espeto bovino",
                 1_800L,
+                true,
                 10,
                 3
         );
@@ -38,6 +39,7 @@ class CatalogEntryEntityTest {
                 "Lavagem",
                 "lavagem",
                 3_000L,
+                true,
                 50,
                 5
         );
@@ -52,6 +54,29 @@ class CatalogEntryEntityTest {
     }
 
     @Test
+    void itemWithoutStockControlCanBeSoldWithoutLimit() {
+        CatalogEntryEntity entry = CatalogEntryEntity.create(
+                CatalogEntryType.ITEM,
+                "Produto livre",
+                "produto livre",
+                1_000L,
+                false,
+                -10,
+                -5
+        );
+
+        assertFalse(entry.tracksStock());
+        assertFalse(entry.isStockEnabled());
+        assertNull(entry.getStockQuantity());
+        assertNull(entry.getMinimumStockQuantity());
+        assertTrue(entry.hasAvailableStock(999));
+
+        entry.decreaseStock(999);
+
+        assertNull(entry.getStockQuantity());
+    }
+
+    @Test
     void itemRejectsInvalidStockConfiguration() {
         assertThrows(
                 IllegalArgumentException.class,
@@ -60,6 +85,7 @@ class CatalogEntryEntityTest {
                         "Espeto",
                         "espeto",
                         1_000L,
+                        true,
                         null,
                         0
                 )
@@ -73,6 +99,7 @@ class CatalogEntryEntityTest {
                 "Espeto",
                 "espeto",
                 1_000L,
+                true,
                 2,
                 1
         );
