@@ -25,14 +25,19 @@ try {
         "terminal-reversal",
         "directSale",
         "saleItems",
-        "adminMode"
+        "adminMode",
+        "window.print",
+        "printWindow.print",
+        "createReceiptPrintHtml",
+        "receipt/print"
     )
 
     $sourceRoots = @(
         ".\backend\src\main\java",
         ".\backend\src\test\java",
         ".\frontend\src",
-        ".\pagbank-agent\src"
+        ".\pagbank-agent\src",
+        ".\printer-agent\src"
     )
 
     $sourceFiles = Get-ChildItem $sourceRoots -Recurse -File -Include $sourceExtensions
@@ -57,8 +62,12 @@ try {
         throw "Ainda existem artefatos gerados ou backups versionados."
     }
 
-    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V41__add_simplified_catalog_stock.sql")) {
-        throw "A migration V41 nao foi encontrada."
+    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V43__add_print_queue.sql")) {
+        throw "A migration V43 nao foi encontrada."
+    }
+
+    if (-not (Test-Path ".\printer-agent\pom.xml")) {
+        throw "O printer-agent nao foi encontrado."
     }
 
     Write-Host "Auditoria final aprovada."

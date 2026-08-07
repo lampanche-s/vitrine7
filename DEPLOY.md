@@ -95,3 +95,13 @@ sudo systemctl reload nginx
 ```
 
 Não remova manualmente linhas de `flyway_schema_history`.
+
+## Agente de impressão térmica
+
+O backend precisa de um segredo exclusivo para autenticar o agente local de impressão:
+
+```env
+APP_PRINTER_AGENT_TOKEN=<token-forte-compartilhado-com-o-agente>
+```
+
+O agente Windows é distribuído separadamente em `vitrine7-printer-agent.zip` e usa o mesmo token em `printer-agent.properties`.

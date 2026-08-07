@@ -174,6 +174,7 @@ export function mapOfficialReceipt(
   ];
 
   return {
+    checkoutId: response.operation.checkoutId,
     establishmentName:
       response.establishment.name ??
       "Vitrine 7 Estética Automotiva e Espeto Bar",

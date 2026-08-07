@@ -26,3 +26,5 @@ release/
 .idea/
 .DS_Store
 Thumbs.db
+# Printer agent local configuration
+printer-agent/printer-agent.properties

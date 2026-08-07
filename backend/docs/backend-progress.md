@@ -106,7 +106,7 @@
   - consulta de transacao por snapshot, sem redirecionamento implicito para provider ativo;
   - dinheiro com recebido/troco, sem transaction de terminal, recibo preservado e replay sem duplicidade;
   - fallback manual para PIX, credito e debito, sem transaction de terminal e com provider ativo sem interferencia;
-  - recibo nao fiscal JSON e HTML 80 mm, reimpressao deterministica e sem credenciais;
+  - recibo nao fiscal JSON 80 mm e fila autenticada para impressao termica pelo agente local;
   - fiscal local para `NFCE_WITHOUT_CPF` e `NFCE_WITH_CPF`, exatamente um documento `PENDING_CONFIGURATION` por checkout e sem comunicacao externa;
   - auditoria de criacao, atualizacao, ativacao, teste, configuracao dinamica e pagamentos aprovado/recusado, sem credenciais, ciphertext, nonce, token ou chave mestra;
   - exportacao JSONL valida para o periodo temporario, com eventos de provider e sem segredos;
@@ -327,14 +327,15 @@
 - Recibo nao fiscal implementado como read model em `br.com.vitrine7.receipt`, sem tabela de recibos, PDF persistido, numeracao fiscal, NFC-e, SEFAZ, QR Code, evento assíncrono ou servico externo.
 - Endpoints operacionais:
   - `GET /api/v1/checkouts/{checkoutId}/receipt`
-  - `GET /api/v1/checkouts/{checkoutId}/receipt/print`
+  - `POST /api/v1/checkouts/{checkoutId}/print-jobs`
+  - `GET /api/v1/print-jobs/{printJobId}`
 - Operacoes suportadas:
   - venda direta;
   - comanda;
   - ordem de servico do Lava Jato.
 - Fonte exclusiva de pagamento: exatamente um `payments.status = 'APPROVED'`, com validacao de igualdade entre total do checkout, pagamento aprovado e operacao historica.
 - Dados do recibo usam snapshots historicos das linhas de venda/comanda e da OS; alteracoes posteriores em catalogos, cliente e veiculo nao alteram recibos ja emitidos.
-- HTML de impressao para bobina de 80 mm:
+- impressao termica silenciosa em bobina de 80 mm:
   - `text/html; charset=UTF-8`;
   - `Content-Disposition: inline`;
   - `Cache-Control: no-store`;
@@ -352,7 +353,7 @@
   - venda direta finalizada com duas linhas, desconto, dinheiro, valor recebido e troco;
   - comanda fechada com prato, item de venda direta e terminal simulado aprovado;
   - OS Lava paga com cliente, telefone, veiculo, placa, porte e dois servicos;
-  - reimpressao HTML deterministica;
+  - reimpressao por fila deterministica;
   - HTML injection escapado;
   - estados invalidos rejeitados com erro de negocio;
   - divergencia financeira rejeitada;

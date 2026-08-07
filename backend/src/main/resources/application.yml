@@ -29,6 +29,9 @@ app:
   backup:
     pg-dump-path: ${APP_BACKUP_PG_DUMP_PATH:pg_dump}
     timeout: ${APP_BACKUP_TIMEOUT:5m}
+  printer-agent:
+    token: ${APP_PRINTER_AGENT_TOKEN:}
+    long-poll-max: ${APP_PRINTER_AGENT_LONG_POLL_MAX:25s}
   payment-terminal:
     bridge:
       command-timeout: ${APP_PAYMENT_TERMINAL_BRIDGE_COMMAND_TIMEOUT:120s}

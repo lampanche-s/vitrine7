@@ -1,0 +1,14 @@
+# URL publica do Vitrine 7, sem /api/v1 no final.
+backend.url=https://vitrine7sys.duckdns.org
+
+# Mesmo segredo configurado no backend em APP_PRINTER_AGENT_TOKEN.
+agent.token=SUBSTITUA_POR_UM_TOKEN_FORTE
+
+# Nome exato exibido pelo Windows em Configuracoes > Impressoras.
+printer.name=SUBSTITUA_PELO_NOME_DA_IMPRESSORA
+
+poll.wait.seconds=20
+paper.width.mm=80
+paper.margin.mm=2
+font.size.pt=7
+line.height.pt=9

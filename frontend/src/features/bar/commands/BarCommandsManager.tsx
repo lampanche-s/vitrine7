@@ -66,6 +66,9 @@ import {
   useReceiptViewer,
 } from "../../../shared/receipts/useReceiptViewer";
 import {
+  useReceiptPrinter,
+} from "../../../shared/receipts/useReceiptPrinter";
+import {
   currencyInputToNumber,
   formatCurrencyInput,
 } from "../../../shared/formatters/currencyInput";
@@ -205,6 +208,7 @@ export function BarCommandsManager({
   const terminalPayment =
     useTerminalPaymentFlow<BarCommand | null>();
   const receiptViewer = useReceiptViewer();
+  const receiptPrinter = useReceiptPrinter();
   const {
     showErrorToast,
   } = useToast();
@@ -1468,7 +1472,12 @@ export function BarCommandsManager({
         open={receiptViewer.isOpen}
         title={currentReceipt?.title ?? "Comprovante"}
         previewUrl={receiptViewer.previewUrl}
-        printHtml={receiptViewer.printHtml}
+        isPrinting={receiptPrinter.isPrinting}
+        onPrint={
+          currentReceipt?.checkoutId
+            ? () => void receiptPrinter.printReceipt(currentReceipt.checkoutId as string)
+            : undefined
+        }
         onDownload={
           currentReceipt
             ? () => void downloadReceiptPdf(currentReceipt)

@@ -1,6 +1,8 @@
 package br.com.vitrine7.common.security;
 
 import br.com.vitrine7.payment.terminal.bridge.TerminalDeviceAuthenticationFilter;
+import br.com.vitrine7.print.security.PrinterAgentAuthenticationFilter;
+import br.com.vitrine7.print.security.PrinterAgentProperties;
 import br.com.vitrine7.system.user.security.VitrineUserDetailsService;
 import jakarta.servlet.DispatcherType;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -38,7 +40,7 @@ import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(SecurityProperties.class)
+@EnableConfigurationProperties({SecurityProperties.class, PrinterAgentProperties.class})
 public class SecurityConfig {
 
     @Bean
@@ -83,6 +85,16 @@ public class SecurityConfig {
             TerminalDeviceAuthenticationFilter filter
     ) {
         FilterRegistrationBean<TerminalDeviceAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<PrinterAgentAuthenticationFilter> printerAgentFilterRegistration(
+            PrinterAgentAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<PrinterAgentAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
@@ -169,6 +181,7 @@ public class SecurityConfig {
                         "Idempotency-Key",
                         "X-Request-Id",
                         "X-Terminal-Device-Token",
+                        "X-Printer-Agent-Token",
                         "X-User-Activity",
                         "X-XSRF-TOKEN",
                         "X-Requested-With"
@@ -198,6 +211,7 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             TerminalDeviceAuthenticationFilter terminalDeviceAuthenticationFilter,
+            PrinterAgentAuthenticationFilter printerAgentAuthenticationFilter,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
@@ -213,7 +227,10 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(
                                 new CsrfTokenRequestAttributeHandler()
                         )
-                        .ignoringRequestMatchers("/api/v1/payment-terminal/bridge/**")
+                        .ignoringRequestMatchers(
+                                "/api/v1/payment-terminal/bridge/**",
+                                "/api/v1/printer-agent/**"
+                        )
                 )
 
                 .sessionManagement(session -> session
@@ -267,6 +284,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/payment-terminal/bridge/**")
                         .hasAuthority("payment-terminal:bridge")
 
+                        .requestMatchers("/api/v1/printer-agent/**")
+                        .hasAuthority("printer-agent:bridge")
+
                         .anyRequest().authenticated()
                 )
 
@@ -277,6 +297,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         terminalDeviceAuthenticationFilter,
                         JwtAuthenticationFilter.class
+                )
+                .addFilterBefore(
+                        printerAgentAuthenticationFilter,
+                        TerminalDeviceAuthenticationFilter.class
                 );
 
         return http.build();

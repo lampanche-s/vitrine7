@@ -12,6 +12,7 @@ SET
     updated_by_user_id = NULL;
 
 TRUNCATE TABLE
+    print_jobs,
     payment_terminal_commands,
     payment_terminal_pairing_codes,
     payment_terminal_transactions,

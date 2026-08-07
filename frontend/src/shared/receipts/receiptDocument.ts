@@ -21,6 +21,7 @@ export type ReceiptItemLine = {
 };
 
 export type ReceiptDocument = {
+  checkoutId?: string;
   establishmentName?: string;
   establishmentAddress?: string;
   nonFiscalNotice?: string;
@@ -52,15 +53,6 @@ function normalizeFileName(value: string) {
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .toLowerCase();
-}
-
-function escapeReceiptHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 function isBoldReceiptLine(line: string) {
@@ -141,33 +133,6 @@ export async function createReceiptPdf(
   );
 
   return pdf;
-}
-
-export function createReceiptPrintHtml(
-  receipt: ReceiptDocument
-) {
-  const lines = buildReceiptTextLines(receipt);
-
-  const pageHeightMm = Math.max(
-    60,
-    Math.ceil(10 + lines.length * 2.8)
-  );
-
-  const content = escapeReceiptHtml(
-    lines.join("\n")
-  );
-
-  return [
-    `<style id="thermal-receipt-page-style">
-      @page {
-        size: 80mm ${pageHeightMm}mm;
-        margin: 0;
-      }
-    </style>`,
-    '<main class="thermal-receipt" aria-label="Recibo">',
-    `<pre class="thermal-receipt__content">${content}</pre>`,
-    "</main>",
-  ].join("\n");
 }
 
 export async function createReceiptPdfUrl(
