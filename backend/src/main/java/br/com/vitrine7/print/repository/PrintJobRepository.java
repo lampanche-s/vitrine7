@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +51,65 @@ public class PrintJobRepository {
                         .addValue("documentKind", documentKind)
                         .addValue("receiptText", receiptText)
         );
+    }
+
+    public void createCashClosing(
+            UUID id,
+            Long requestedByUserId,
+            LocalDate businessDate,
+            String receiptText
+    ) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO print_jobs (
+                            id,
+                            checkout_session_id,
+                            requested_by_user_id,
+                            business_date,
+                            document_kind,
+                            status,
+                            receipt_text
+                        ) VALUES (
+                            :id,
+                            NULL,
+                            :requestedByUserId,
+                            :businessDate,
+                            'CASH_CLOSING',
+                            'PENDING',
+                            :receiptText
+                        )
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("requestedByUserId", requestedByUserId)
+                        .addValue("businessDate", businessDate)
+                        .addValue("receiptText", receiptText)
+        );
+    }
+
+    public Optional<PrintJobDtos.Created> findActiveCashClosing(
+            long requestedByUserId,
+            LocalDate businessDate
+    ) {
+        return jdbcTemplate.query(
+                """
+                        SELECT id, status
+                        FROM print_jobs
+                        WHERE requested_by_user_id = :requestedByUserId
+                          AND business_date = :businessDate
+                          AND document_kind = 'CASH_CLOSING'
+                          AND status IN ('PENDING', 'PRINTING')
+                        ORDER BY created_at, id
+                        LIMIT 1
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("requestedByUserId", requestedByUserId)
+                        .addValue("businessDate", businessDate),
+                (resultSet, rowNumber) -> new PrintJobDtos.Created(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getString("status")
+                )
+        ).stream().findFirst();
     }
 
     public Optional<PrintJobDtos.Created> findActiveByCheckoutId(

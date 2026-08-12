@@ -79,11 +79,42 @@ public class CashClosingRepository {
                         resultSet.getString("payment_status"),
                         resultSet.getLong("amount_cents"),
                         resultSet.getLong("cash_received_cents"),
-                        resultSet.getLong("cash_change_cents")
+                        resultSet.getLong("cash_change_cents"),
+                        List.of()
                 )
         );
     }
 
+    public List<OperationLine> operationLines(List<Long> operationIds) {
+        if (operationIds.isEmpty()) {
+            return List.of();
+        }
+
+        return jdbcTemplate.query(
+                """
+                        SELECT
+                            tab_id AS operation_id,
+                            entry_type_snapshot AS entry_type,
+                            item_name_snapshot AS item_name,
+                            quantity,
+                            unit_price_cents,
+                            line_total_cents
+                        FROM bar_tab_lines
+                        WHERE tab_id IN (:operationIds)
+                        ORDER BY tab_id ASC, id ASC
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("operationIds", operationIds),
+                (resultSet, rowNumber) -> new OperationLine(
+                        resultSet.getLong("operation_id"),
+                        resultSet.getString("entry_type"),
+                        resultSet.getString("item_name"),
+                        resultSet.getInt("quantity"),
+                        resultSet.getLong("unit_price_cents"),
+                        resultSet.getLong("line_total_cents")
+                )
+        );
+    }
 
     public OpenCommandsSummary openCommands(
             long userId,
@@ -216,6 +247,16 @@ public class CashClosingRepository {
     public record OpenCommandsSummary(
             long count,
             long amountCents
+    ) {
+    }
+
+    public record OperationLine(
+            long operationId,
+            String entryType,
+            String itemName,
+            int quantity,
+            long unitPriceCents,
+            long lineTotalCents
     ) {
     }
 

@@ -2,6 +2,9 @@ package br.com.vitrine7.print.service;
 
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
 import br.com.vitrine7.bar.tab.service.BarTabService;
+import br.com.vitrine7.cashclosing.dto.CashClosingDay;
+import br.com.vitrine7.cashclosing.dto.CashClosingResponse;
+import br.com.vitrine7.cashclosing.service.CashClosingService;
 import br.com.vitrine7.print.dto.PrintJobDtos;
 import br.com.vitrine7.print.repository.PrintJobRepository;
 import br.com.vitrine7.receipt.dto.ReceiptResponse;
@@ -10,6 +13,7 @@ import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -33,13 +37,17 @@ class PrintJobServiceTest {
     private final ReceiptService receiptService = mock(ReceiptService.class);
     private final ReceiptTextRenderer renderer = mock(ReceiptTextRenderer.class);
     private final PrePaymentNoteRenderer prePaymentRenderer = mock(PrePaymentNoteRenderer.class);
+    private final CashClosingTextRenderer cashClosingRenderer = mock(CashClosingTextRenderer.class);
     private final BarTabService barTabService = mock(BarTabService.class);
+    private final CashClosingService cashClosingService = mock(CashClosingService.class);
     private final PrintJobService service = new PrintJobService(
             repository,
             receiptService,
             renderer,
             prePaymentRenderer,
+            cashClosingRenderer,
             barTabService,
+            cashClosingService,
             CLOCK
     );
 
@@ -119,6 +127,34 @@ class PrintJobServiceTest {
                 9L,
                 "PREPAYMENT_NOTE",
                 "CONFERENCIA\n"
+        );
+    }
+
+    @Test
+    void queuesCashClosingForSelectedBusinessDate() {
+        VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
+        CashClosingResponse report = mock(CashClosingResponse.class);
+        LocalDate businessDate = LocalDate.of(2026, 8, 12);
+
+        when(principal.getId()).thenReturn(9L);
+        when(cashClosingService.get(CashClosingDay.TODAY, principal))
+                .thenReturn(report);
+        when(report.businessDate()).thenReturn(businessDate);
+        when(repository.findActiveCashClosing(9L, businessDate))
+                .thenReturn(Optional.empty());
+        when(cashClosingRenderer.render(report)).thenReturn("FECHAMENTO\n");
+
+        PrintJobDtos.Created created = service.createCashClosing(
+                CashClosingDay.TODAY,
+                principal
+        );
+
+        assertEquals("PENDING", created.status());
+        verify(repository).createCashClosing(
+                created.id(),
+                9L,
+                businessDate,
+                "FECHAMENTO\n"
         );
     }
 

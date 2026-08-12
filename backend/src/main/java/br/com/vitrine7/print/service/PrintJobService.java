@@ -1,6 +1,9 @@
 package br.com.vitrine7.print.service;
 
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
+import br.com.vitrine7.cashclosing.dto.CashClosingDay;
+import br.com.vitrine7.cashclosing.dto.CashClosingResponse;
+import br.com.vitrine7.cashclosing.service.CashClosingService;
 import br.com.vitrine7.bar.tab.service.BarTabService;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
@@ -23,7 +26,9 @@ public class PrintJobService {
     private final ReceiptService receiptService;
     private final ReceiptTextRenderer textRenderer;
     private final PrePaymentNoteRenderer prePaymentNoteRenderer;
+    private final CashClosingTextRenderer cashClosingTextRenderer;
     private final BarTabService barTabService;
+    private final CashClosingService cashClosingService;
     private final Clock clock;
 
     public PrintJobService(
@@ -31,14 +36,18 @@ public class PrintJobService {
             ReceiptService receiptService,
             ReceiptTextRenderer textRenderer,
             PrePaymentNoteRenderer prePaymentNoteRenderer,
+            CashClosingTextRenderer cashClosingTextRenderer,
             BarTabService barTabService,
+            CashClosingService cashClosingService,
             Clock clock
     ) {
         this.repository = repository;
         this.receiptService = receiptService;
         this.textRenderer = textRenderer;
         this.prePaymentNoteRenderer = prePaymentNoteRenderer;
+        this.cashClosingTextRenderer = cashClosingTextRenderer;
         this.barTabService = barTabService;
+        this.cashClosingService = cashClosingService;
         this.clock = clock;
     }
 
@@ -101,6 +110,34 @@ public class PrintJobService {
                 principal.getId(),
                 "PREPAYMENT_NOTE",
                 prePaymentNoteRenderer.render(tab)
+        );
+
+        return new PrintJobDtos.Created(id, "PENDING");
+    }
+
+    @Transactional
+    public PrintJobDtos.Created createCashClosing(
+            CashClosingDay day,
+            VitrineUserPrincipal principal
+    ) {
+        CashClosingResponse report = cashClosingService.get(day, principal);
+        PrintJobDtos.Created active = repository
+                .findActiveCashClosing(
+                        principal.getId(),
+                        report.businessDate()
+                )
+                .orElse(null);
+
+        if (active != null) {
+            return active;
+        }
+
+        UUID id = UUID.randomUUID();
+        repository.createCashClosing(
+                id,
+                principal.getId(),
+                report.businessDate(),
+                cashClosingTextRenderer.render(report)
         );
 
         return new PrintJobDtos.Created(id, "PENDING");

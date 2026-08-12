@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CashClosingService {
@@ -65,6 +66,8 @@ public class CashClosingService {
                 now,
                 current.grossSalesCents(),
                 current.totalReceivedCents(),
+                current.itemSalesCents(),
+                current.serviceSalesCents(),
                 current.saleCount(),
                 current.averageTicketCents(),
                 current.reversedCents(),
@@ -100,10 +103,49 @@ public class CashClosingService {
                 .toInstant()
                 .atOffset(ZoneOffset.UTC);
 
-        List<CashClosingResponse.Operation> operations =
+        List<CashClosingResponse.Operation> rawOperations =
                 repository.operations(principal.getId(), from, to);
+        List<Long> operationIds = rawOperations.stream()
+                .map(CashClosingResponse.Operation::operationId)
+                .distinct()
+                .toList();
+        Map<Long, List<CashClosingResponse.Line>> linesByOperation =
+                repository.operationLines(operationIds).stream()
+                        .collect(Collectors.groupingBy(
+                                CashClosingRepository.OperationLine::operationId,
+                                LinkedHashMap::new,
+                                Collectors.mapping(
+                                        line -> new CashClosingResponse.Line(
+                                                line.entryType(),
+                                                line.itemName(),
+                                                line.quantity(),
+                                                line.unitPriceCents(),
+                                                line.lineTotalCents()
+                                        ),
+                                        Collectors.toList()
+                                )
+                        ));
+
+        List<CashClosingResponse.Operation> operations = rawOperations.stream()
+                .map(operation -> new CashClosingResponse.Operation(
+                        operation.operationId(),
+                        operation.displayName(),
+                        operation.completedAt(),
+                        operation.paymentMethod(),
+                        operation.paymentStatus(),
+                        operation.amountCents(),
+                        operation.cashReceivedCents(),
+                        operation.cashChangeCents(),
+                        List.copyOf(linesByOperation.getOrDefault(
+                                operation.operationId(),
+                                List.of()
+                        ))
+                ))
+                .toList();
 
         long totalReceived = 0L;
+        long itemSalesCents = 0L;
+        long serviceSalesCents = 0L;
         long saleCount = 0L;
         long reversedCents = 0L;
         long reversedCount = 0L;
@@ -129,6 +171,10 @@ public class CashClosingService {
 
             totalReceived += operation.amountCents();
             saleCount++;
+
+            TypeAmounts typeAmounts = allocateByEntryType(operation);
+            itemSalesCents += typeAmounts.itemCents();
+            serviceSalesCents += typeAmounts.serviceCents();
 
             if ("CASH".equals(operation.paymentMethod())) {
                 cashReceivedCents += operation.cashReceivedCents();
@@ -173,6 +219,8 @@ public class CashClosingService {
                 closedAt,
                 grossSalesCents,
                 totalReceived,
+                itemSalesCents,
+                serviceSalesCents,
                 saleCount,
                 averageTicketCents,
                 reversedCents,
@@ -188,8 +236,45 @@ public class CashClosingService {
         );
     }
 
+    private TypeAmounts allocateByEntryType(CashClosingResponse.Operation operation) {
+        long itemSubtotal = operation.lines().stream()
+                .filter(line -> "ITEM".equals(line.entryType()))
+                .mapToLong(CashClosingResponse.Line::lineTotalCents)
+                .sum();
+        long serviceSubtotal = operation.lines().stream()
+                .filter(line -> "SERVICE".equals(line.entryType()))
+                .mapToLong(CashClosingResponse.Line::lineTotalCents)
+                .sum();
+        long classifiedSubtotal = itemSubtotal + serviceSubtotal;
+
+        if (classifiedSubtotal <= 0L) {
+            return new TypeAmounts(0L, 0L);
+        }
+        if (serviceSubtotal == 0L) {
+            return new TypeAmounts(operation.amountCents(), 0L);
+        }
+        if (itemSubtotal == 0L) {
+            return new TypeAmounts(0L, operation.amountCents());
+        }
+
+        long itemAmount = Math.round(
+                (double) operation.amountCents() * itemSubtotal / classifiedSubtotal
+        );
+        itemAmount = Math.max(0L, Math.min(operation.amountCents(), itemAmount));
+        return new TypeAmounts(
+                itemAmount,
+                operation.amountCents() - itemAmount
+        );
+    }
+
     private static final class MutableBreakdown {
         private long amountCents;
         private long saleCount;
+    }
+
+    private record TypeAmounts(
+            long itemCents,
+            long serviceCents
+    ) {
     }
 }

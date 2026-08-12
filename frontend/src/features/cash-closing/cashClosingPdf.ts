@@ -35,6 +35,10 @@ function paymentLabel(method: string) {
   }
 }
 
+function entryTypeLabel(entryType: string) {
+  return entryType === "SERVICE" ? "SERVIÇO" : "ITEM";
+}
+
 export async function exportCashClosingPdf(
   report: CashClosingReport
 ) {
@@ -51,6 +55,13 @@ export async function exportCashClosingPdf(
   const left = 16;
   const right = 194;
   let y = 18;
+
+  function ensureSpace(required = 10) {
+    if (y + required > 282) {
+      pdf.addPage();
+      y = 18;
+    }
+  }
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(16);
@@ -84,6 +95,8 @@ export async function exportCashClosingPdf(
   const metrics = [
     ["Total bruto vendido", brl(report.grossSalesCents)],
     ["Total líquido", brl(report.totalReceivedCents)],
+    ["Total em itens", brl(report.itemSalesCents)],
+    ["Total em serviços", brl(report.serviceSalesCents)],
     ["Vendas concluídas", String(report.saleCount)],
     ["Ticket médio", brl(report.averageTicketCents)],
     ["Estornos", `${report.reversedCount} (${brl(report.reversedCents)})`],
@@ -99,6 +112,7 @@ export async function exportCashClosingPdf(
 
   pdf.setFont("helvetica", "bold");
   for (const [label, value] of metrics) {
+    ensureSpace(7);
     pdf.text(label, left, y);
     pdf.setFont("helvetica", "normal");
     pdf.text(value, 70, y);
@@ -107,6 +121,7 @@ export async function exportCashClosingPdf(
   }
 
   y += 2;
+  ensureSpace(14);
   pdf.line(left, y, right, y);
   y += 7;
   pdf.text("Formas de pagamento", left, y);
@@ -118,6 +133,7 @@ export async function exportCashClosingPdf(
     y += 6;
   } else {
     for (const item of report.paymentBreakdown) {
+      ensureSpace(7);
       pdf.text(
         `${paymentLabel(item.method)} — ${item.saleCount} venda(s)`,
         left,
@@ -131,6 +147,7 @@ export async function exportCashClosingPdf(
   }
 
   y += 2;
+  ensureSpace(14);
   pdf.line(left, y, right, y);
   y += 7;
   pdf.setFont("helvetica", "bold");
@@ -143,21 +160,20 @@ export async function exportCashClosingPdf(
     pdf.text("Nenhuma operação no período.", left, y);
   } else {
     for (const operation of report.operations) {
-      if (y > 280) {
-        pdf.addPage();
-        y = 18;
-      }
+      ensureSpace(18);
 
       const status = operation.paymentStatus === "REVERSED"
         ? "Estornada"
         : "Concluída";
 
+      pdf.setFont("helvetica", "bold");
       pdf.text(
         `${dateTime(operation.completedAt)} · Comanda #${operation.operationId} · ${operation.displayName}`,
         left,
         y
       );
       y += 4.5;
+      pdf.setFont("helvetica", "normal");
       pdf.text(
         `${paymentLabel(operation.paymentMethod)} · ${status}`,
         left + 4,
@@ -169,7 +185,41 @@ export async function exportCashClosingPdf(
         y,
         { align: "right" }
       );
-      y += 6;
+      y += 5;
+
+      for (const line of operation.lines) {
+        ensureSpace(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(
+          `[${entryTypeLabel(line.entryType)}]`,
+          left + 4,
+          y
+        );
+        pdf.setFont("helvetica", "normal");
+        pdf.text(
+          `${line.quantity}x ${line.itemName}`,
+          left + 25,
+          y,
+          { maxWidth: 112 }
+        );
+        pdf.text(
+          brl(line.lineTotalCents),
+          right,
+          y,
+          { align: "right" }
+        );
+        y += 4.5;
+        pdf.setTextColor(100);
+        pdf.text(
+          `${brl(line.unitPriceCents)} cada`,
+          left + 25,
+          y
+        );
+        pdf.setTextColor(0);
+        y += 5;
+      }
+
+      y += 2;
     }
   }
 

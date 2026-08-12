@@ -3,6 +3,8 @@ package br.com.vitrine7.cashclosing.controller;
 import br.com.vitrine7.cashclosing.dto.CashClosingDay;
 import br.com.vitrine7.cashclosing.dto.CashClosingResponse;
 import br.com.vitrine7.cashclosing.service.CashClosingService;
+import br.com.vitrine7.print.dto.PrintJobDtos;
+import br.com.vitrine7.print.service.PrintJobService;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,9 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class CashClosingController {
 
     private final CashClosingService service;
+    private final PrintJobService printJobService;
 
-    public CashClosingController(CashClosingService service) {
+    public CashClosingController(
+            CashClosingService service,
+            PrintJobService printJobService
+    ) {
         this.service = service;
+        this.printJobService = printJobService;
     }
 
     @GetMapping("/{day}")
@@ -29,6 +36,14 @@ public class CashClosingController {
             @AuthenticationPrincipal VitrineUserPrincipal principal
     ) {
         return service.get(day, principal);
+    }
+
+    @PostMapping("/{day}/print-jobs")
+    public PrintJobDtos.Created print(
+            @PathVariable CashClosingDay day,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return printJobService.createCashClosing(day, principal);
     }
 
     @PostMapping("/{day}/close")

@@ -8,6 +8,14 @@ export type CashClosingPaymentBreakdown = {
   saleCount: number;
 };
 
+export type CashClosingOperationLine = {
+  entryType: "ITEM" | "SERVICE" | string;
+  itemName: string;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+};
+
 export type CashClosingOperation = {
   operationId: number;
   displayName: string;
@@ -17,6 +25,7 @@ export type CashClosingOperation = {
   amountCents: number;
   cashReceivedCents: number;
   cashChangeCents: number;
+  lines: CashClosingOperationLine[];
 };
 
 export type CashClosingReport = {
@@ -26,6 +35,8 @@ export type CashClosingReport = {
   closedAt: string | null;
   grossSalesCents: number;
   totalReceivedCents: number;
+  itemSalesCents: number;
+  serviceSalesCents: number;
   saleCount: number;
   averageTicketCents: number;
   reversedCents: number;

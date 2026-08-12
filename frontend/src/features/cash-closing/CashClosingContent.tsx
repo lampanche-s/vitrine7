@@ -5,6 +5,7 @@ import {
 
 import {
   Download,
+  Printer,
   RefreshCw,
   WalletCards,
 } from "lucide-react";
@@ -39,6 +40,10 @@ import {
   exportCashClosingPdf,
 } from "./cashClosingPdf";
 
+import {
+  useReceiptPrinter,
+} from "../../shared/receipts/useReceiptPrinter";
+
 function paymentLabel(method: string) {
   switch (method) {
     case "CASH":
@@ -58,6 +63,10 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR").format(
     new Date(`${value}T12:00:00`)
   );
+}
+
+function entryTypeLabel(entryType: string) {
+  return entryType === "SERVICE" ? "Serviço" : "Item";
 }
 
 function formatDateTime(value: string | null) {
@@ -81,6 +90,10 @@ export function CashClosingContent({
   const [isLoading, setIsLoading] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const {
+    isPrinting,
+    printCashClosing,
+  } = useReceiptPrinter();
   const {
     showToast,
     showErrorToast,
@@ -205,6 +218,14 @@ export function CashClosingContent({
         >
           {isExporting ? "Exportando..." : "Exportar PDF"}
         </Button>
+        <Button
+          variant="secondary"
+          leadingIcon={<Printer />}
+          disabled={!report || isPrinting}
+          onClick={() => void printCashClosing(day)}
+        >
+          {isPrinting ? "Imprimindo..." : "Imprimir fechamento"}
+        </Button>
       </PageActions>
 
       <PremiumCard>
@@ -261,6 +282,24 @@ export function CashClosingContent({
           </p>
           <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
             {formatBrlCurrency((report?.totalReceivedCents ?? 0) / 100)}
+          </p>
+        </PremiumCard>
+
+        <PremiumCard>
+          <p className="text-[11px] font-medium uppercase text-[var(--text-subtle)]">
+            Total em itens
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
+            {formatBrlCurrency((report?.itemSalesCents ?? 0) / 100)}
+          </p>
+        </PremiumCard>
+
+        <PremiumCard>
+          <p className="text-[11px] font-medium uppercase text-[var(--text-subtle)]">
+            Total em serviços
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--text-base)]">
+            {formatBrlCurrency((report?.serviceSalesCents ?? 0) / 100)}
           </p>
         </PremiumCard>
 
@@ -390,6 +429,26 @@ export function CashClosingContent({
                       ? " · Estornada"
                       : " · Aprovada"}
                   </p>
+                  {operation.lines.length > 0 ? (
+                    <div className="mt-2 space-y-1.5">
+                      {operation.lines.map((line, index) => (
+                        <div
+                          key={`${operation.operationId}-${index}-${line.itemName}`}
+                          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]"
+                        >
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">
+                            {entryTypeLabel(line.entryType)}
+                          </span>
+                          <span>
+                            {line.quantity}x {line.itemName}
+                          </span>
+                          <span className="text-[var(--text-subtle)]">
+                            {formatBrlCurrency(line.lineTotalCents / 100)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <p className={[
                   "text-sm font-medium",

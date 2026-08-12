@@ -11,6 +11,8 @@ public record CashClosingResponse(
         OffsetDateTime closedAt,
         long grossSalesCents,
         long totalReceivedCents,
+        long itemSalesCents,
+        long serviceSalesCents,
         long saleCount,
         long averageTicketCents,
         long reversedCents,
@@ -39,7 +41,17 @@ public record CashClosingResponse(
             String paymentStatus,
             long amountCents,
             long cashReceivedCents,
-            long cashChangeCents
+            long cashChangeCents,
+            List<Line> lines
+    ) {
+    }
+
+    public record Line(
+            String entryType,
+            String itemName,
+            int quantity,
+            long unitPriceCents,
+            long lineTotalCents
     ) {
     }
 }
