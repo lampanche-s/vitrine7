@@ -32,6 +32,14 @@ public class PrintJobController {
         return service.create(checkoutId, principal);
     }
 
+    @PostMapping("/bar/tabs/{tabId}/prepayment-print-jobs")
+    public PrintJobDtos.Created createPrePaymentNote(
+            @PathVariable Long tabId,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return service.createPrePaymentNote(tabId, principal);
+    }
+
     @GetMapping("/print-jobs/{id}")
     public PrintJobDtos.Status status(@PathVariable UUID id) {
         return service.status(id);

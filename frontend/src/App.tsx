@@ -6,6 +6,7 @@ import {
 import {
   BarChart3,
   ClipboardList,
+  WalletCards,
   History,
   Menu,
   NotebookTabs,
@@ -33,6 +34,7 @@ import {
 import { BarContent } from "./features/bar/BarContent";
 import { Header } from "./features/layout/Header";
 import { ClientsContent } from "./features/clients";
+import { CashClosingContent } from "./features/cash-closing";
 import { LoginScreen } from "./features/login/LoginScreen";
 import {
   AUTH_SESSION_EXPIRED_EVENT,
@@ -53,6 +55,7 @@ type AppSection =
   | "catalog"
   | "clients"
   | "reports"
+  | "cash-closing"
   | "users";
 
 type NavigationItem = {
@@ -94,6 +97,12 @@ const navigationItems: NavigationItem[] = [
     permission: "reports:access",
   },
   {
+    id: "cash-closing",
+    label: "Fechamento de Caixa",
+    icon: WalletCards,
+    permission: "reports:access",
+  },
+  {
     id: "users",
     label: "Usuários",
     icon: UserCog,
@@ -104,7 +113,7 @@ const navigationItems: NavigationItem[] = [
 const barTabBySection: Record<
   Exclude<
     AppSection,
-    "clients" | "users"
+    "clients" | "cash-closing" | "users"
   >,
   TabId
 > = {
@@ -143,6 +152,9 @@ function AppContent({
     switch (activeSection) {
       case "clients":
         return <ClientsContent />;
+
+      case "cash-closing":
+        return <CashClosingContent />;
 
       case "users":
         return <AdminPanel />;

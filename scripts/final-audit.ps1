@@ -62,8 +62,8 @@ try {
         throw "Ainda existem artefatos gerados ou backups versionados."
     }
 
-    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V43__add_print_queue.sql")) {
-        throw "A migration V43 nao foi encontrada."
+    if (-not (Test-Path ".\backend\src\main\resources\db\migration\V44__add_cash_closing_and_pre_payment_note.sql")) {
+        throw "A migration V44 nao foi encontrada."
     }
 
     if (-not (Test-Path ".\printer-agent\pom.xml")) {

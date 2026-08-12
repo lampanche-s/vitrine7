@@ -1,5 +1,7 @@
 package br.com.vitrine7.print.service;
 
+import br.com.vitrine7.bar.tab.dto.BarTabResponse;
+import br.com.vitrine7.bar.tab.service.BarTabService;
 import br.com.vitrine7.print.dto.PrintJobDtos;
 import br.com.vitrine7.print.repository.PrintJobRepository;
 import br.com.vitrine7.receipt.dto.ReceiptResponse;
@@ -30,10 +32,14 @@ class PrintJobServiceTest {
     private final PrintJobRepository repository = mock(PrintJobRepository.class);
     private final ReceiptService receiptService = mock(ReceiptService.class);
     private final ReceiptTextRenderer renderer = mock(ReceiptTextRenderer.class);
+    private final PrePaymentNoteRenderer prePaymentRenderer = mock(PrePaymentNoteRenderer.class);
+    private final BarTabService barTabService = mock(BarTabService.class);
     private final PrintJobService service = new PrintJobService(
             repository,
             receiptService,
             renderer,
+            prePaymentRenderer,
+            barTabService,
             CLOCK
     );
 
@@ -44,7 +50,7 @@ class PrintJobServiceTest {
         VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
 
         when(principal.getId()).thenReturn(15L);
-        when(repository.findActiveByCheckoutId(checkoutId)).thenReturn(Optional.empty());
+        when(repository.findActiveByCheckoutId(checkoutId, "RECEIPT")).thenReturn(Optional.empty());
         when(receiptService.getReceipt(checkoutId, principal)).thenReturn(receipt);
         when(renderer.render(receipt)).thenReturn("RECIBO\n");
 
@@ -55,6 +61,7 @@ class PrintJobServiceTest {
                 created.id(),
                 checkoutId,
                 15L,
+                "RECEIPT",
                 "RECIBO\n"
         );
     }
@@ -67,11 +74,52 @@ class PrintJobServiceTest {
         VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
         PrintJobDtos.Created active = new PrintJobDtos.Created(jobId, "PENDING");
 
-        when(repository.findActiveByCheckoutId(checkoutId))
+        when(repository.findActiveByCheckoutId(checkoutId, "RECEIPT"))
                 .thenReturn(Optional.of(active));
 
         assertEquals(active, service.create(checkoutId, principal));
-        verify(repository).findActiveByCheckoutId(checkoutId);
+        verify(repository).findActiveByCheckoutId(checkoutId, "RECEIPT");
+    }
+
+    @Test
+    void queuesPrePaymentNoteSeparatelyFromReceipt() {
+        UUID checkoutId = UUID.randomUUID();
+        VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
+        BarTabResponse tab = new BarTabResponse(
+                44L,
+                "Mesa 4",
+                "PAYMENT_PENDING",
+                checkoutId,
+                "AWAITING_PAYMENT",
+                1500L,
+                0L,
+                1500L,
+                "GENERAL_RECEIPT",
+                null,
+                true,
+                null,
+                java.util.List.of(),
+                9L,
+                null,
+                null
+        );
+
+        when(principal.getId()).thenReturn(9L);
+        when(barTabService.findById(44L)).thenReturn(tab);
+        when(repository.findActiveByCheckoutId(checkoutId, "PREPAYMENT_NOTE"))
+                .thenReturn(Optional.empty());
+        when(prePaymentRenderer.render(tab)).thenReturn("CONFERENCIA\n");
+
+        PrintJobDtos.Created created = service.createPrePaymentNote(44L, principal);
+
+        assertEquals("PENDING", created.status());
+        verify(repository).create(
+                created.id(),
+                checkoutId,
+                9L,
+                "PREPAYMENT_NOTE",
+                "CONFERENCIA\n"
+        );
     }
 
     @Test

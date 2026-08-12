@@ -21,3 +21,11 @@ export type {
   SalesReportScope,
   SystemBackupDownload,
 } from "./reports.repository";
+
+export type {
+  CashClosingDay,
+  CashClosingPaymentBreakdown,
+  CashClosingOperation,
+  CashClosingReport,
+  CashClosingRepository,
+} from "./cash-closing.repository";

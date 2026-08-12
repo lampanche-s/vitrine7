@@ -42,8 +42,12 @@ export function useReceiptPrinter() {
     showErrorToast,
   } = useToast();
 
-  const printReceipt = useCallback(
-    async (checkoutId: string) => {
+  const runPrintJob = useCallback(
+    async (
+      createPath: string,
+      successTitle: string,
+      successDescription: string
+    ) => {
       if (isPrinting) {
         return;
       }
@@ -53,7 +57,7 @@ export function useReceiptPrinter() {
       try {
         const job =
           await httpClient.post<PrintJobCreated>(
-            `/checkouts/${checkoutId}/print-jobs`
+            createPath
           );
 
         for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -69,9 +73,8 @@ export function useReceiptPrinter() {
 
           if (status.status === "PRINTED") {
             showToast({
-              title: "Impresso",
-              description:
-                "O comprovante foi enviado para a impressora térmica.",
+              title: successTitle,
+              description: successDescription,
               variant: "success",
             });
             return;
@@ -109,8 +112,31 @@ export function useReceiptPrinter() {
     ]
   );
 
+  const printReceipt = useCallback(
+    async (checkoutId: string) => {
+      await runPrintJob(
+        `/checkouts/${checkoutId}/print-jobs`,
+        "Impresso",
+        "O comprovante foi enviado para a impressora térmica."
+      );
+    },
+    [runPrintJob]
+  );
+
+  const printPrePaymentNote = useCallback(
+    async (tabId: number) => {
+      await runPrintJob(
+        `/bar/tabs/${tabId}/prepayment-print-jobs`,
+        "Nota impressa",
+        "A conferência de consumo foi enviada para a impressora térmica."
+      );
+    },
+    [runPrintJob]
+  );
+
   return {
     isPrinting,
     printReceipt,
+    printPrePaymentNote,
   };
 }

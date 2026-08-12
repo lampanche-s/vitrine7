@@ -1,5 +1,7 @@
 package br.com.vitrine7.print.service;
 
+import br.com.vitrine7.bar.tab.dto.BarTabResponse;
+import br.com.vitrine7.bar.tab.service.BarTabService;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.print.dto.PrintJobDtos;
@@ -20,17 +22,23 @@ public class PrintJobService {
     private final PrintJobRepository repository;
     private final ReceiptService receiptService;
     private final ReceiptTextRenderer textRenderer;
+    private final PrePaymentNoteRenderer prePaymentNoteRenderer;
+    private final BarTabService barTabService;
     private final Clock clock;
 
     public PrintJobService(
             PrintJobRepository repository,
             ReceiptService receiptService,
             ReceiptTextRenderer textRenderer,
+            PrePaymentNoteRenderer prePaymentNoteRenderer,
+            BarTabService barTabService,
             Clock clock
     ) {
         this.repository = repository;
         this.receiptService = receiptService;
         this.textRenderer = textRenderer;
+        this.prePaymentNoteRenderer = prePaymentNoteRenderer;
+        this.barTabService = barTabService;
         this.clock = clock;
     }
 
@@ -40,7 +48,7 @@ public class PrintJobService {
             VitrineUserPrincipal principal
     ) {
         PrintJobDtos.Created active = repository
-                .findActiveByCheckoutId(checkoutId)
+                .findActiveByCheckoutId(checkoutId, "RECEIPT")
                 .orElse(null);
 
         if (active != null) {
@@ -54,7 +62,45 @@ public class PrintJobService {
                 id,
                 checkoutId,
                 principal.getId(),
+                "RECEIPT",
                 textRenderer.render(receipt)
+        );
+
+        return new PrintJobDtos.Created(id, "PENDING");
+    }
+
+    @Transactional
+    public PrintJobDtos.Created createPrePaymentNote(
+            Long tabId,
+            VitrineUserPrincipal principal
+    ) {
+        BarTabResponse tab = barTabService.findById(tabId);
+
+        if (!"PAYMENT_PENDING".equals(tab.status()) || tab.checkoutId() == null) {
+            throw new BusinessException(
+                    "BAR_TAB_NOT_READY_FOR_PREPAYMENT_PRINT",
+                    "Envie a comanda para pagamento antes de imprimir a conferencia."
+            );
+        }
+
+        PrintJobDtos.Created active = repository
+                .findActiveByCheckoutId(
+                        tab.checkoutId(),
+                        "PREPAYMENT_NOTE"
+                )
+                .orElse(null);
+
+        if (active != null) {
+            return active;
+        }
+
+        UUID id = UUID.randomUUID();
+        repository.create(
+                id,
+                tab.checkoutId(),
+                principal.getId(),
+                "PREPAYMENT_NOTE",
+                prePaymentNoteRenderer.render(tab)
         );
 
         return new PrintJobDtos.Created(id, "PENDING");

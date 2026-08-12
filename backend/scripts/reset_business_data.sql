@@ -12,6 +12,7 @@ SET
     updated_by_user_id = NULL;
 
 TRUNCATE TABLE
+    cash_closures,
     print_jobs,
     payment_terminal_commands,
     payment_terminal_pairing_codes,
@@ -45,6 +46,8 @@ SELECT
     (SELECT COUNT(*) FROM clients) AS clientes,
     (SELECT COUNT(*) FROM bar_tabs) AS comandas,
     (SELECT COUNT(*) FROM payments) AS pagamentos,
+    (SELECT COUNT(*) FROM cash_closures) AS fechamentos_caixa,
+    (SELECT COUNT(*) FROM print_jobs) AS impressoes,
     (SELECT COUNT(*) FROM payment_provider_profiles) AS perfis_pagamento;
 \else
 \echo 'Limpeza cancelada. Execute com -v confirmation=RESET_VITRINE7.'

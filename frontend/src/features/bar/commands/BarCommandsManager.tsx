@@ -11,6 +11,7 @@ import {
   Minus,
   Pencil,
   Plus,
+  Printer,
   ReceiptText,
   RotateCcw,
   Trash2,
@@ -1119,14 +1120,32 @@ export function BarCommandsManager({
                   </Button>
 
                   {selectedCommand.status === "awaitingPayment" ? (
-                    <Button
-                      variant="primary"
-                      leadingIcon={<Check />}
-                      onClick={() => setIsCloseModalOpen(true)}
-                      className="w-full sm:w-auto"
-                    >
-                      Fechar e receber
-                    </Button>
+                    <>
+                      <Button
+                        variant="secondary"
+                        disabled={receiptPrinter.isPrinting}
+                        leadingIcon={<Printer />}
+                        onClick={() =>
+                          void receiptPrinter.printPrePaymentNote(
+                            selectedCommand.id
+                          )
+                        }
+                        className="w-full sm:w-auto"
+                      >
+                        {receiptPrinter.isPrinting
+                          ? "Imprimindo..."
+                          : "Imprimir nota"}
+                      </Button>
+
+                      <Button
+                        variant="primary"
+                        leadingIcon={<Check />}
+                        onClick={() => setIsCloseModalOpen(true)}
+                        className="w-full sm:w-auto"
+                      >
+                        Fechar e receber
+                      </Button>
+                    </>
                   ) : null}
 
                   <Button
@@ -1390,7 +1409,7 @@ export function BarCommandsManager({
             <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
               <Button
                 variant="secondary"
-                disabled={isClosingCommand}
+                disabled={isClosingCommand || receiptPrinter.isPrinting}
                 onClick={closeCloseModal}
               >
                 Voltar

@@ -22,6 +22,7 @@ public class PrintJobRepository {
             UUID id,
             UUID checkoutId,
             Long requestedByUserId,
+            String documentKind,
             String receiptText
     ) {
         jdbcTemplate.update(
@@ -30,12 +31,14 @@ public class PrintJobRepository {
                             id,
                             checkout_session_id,
                             requested_by_user_id,
+                            document_kind,
                             status,
                             receipt_text
                         ) VALUES (
                             :id,
                             :checkoutId,
                             :requestedByUserId,
+                            :documentKind,
                             'PENDING',
                             :receiptText
                         )
@@ -44,21 +47,28 @@ public class PrintJobRepository {
                         .addValue("id", id)
                         .addValue("checkoutId", checkoutId)
                         .addValue("requestedByUserId", requestedByUserId)
+                        .addValue("documentKind", documentKind)
                         .addValue("receiptText", receiptText)
         );
     }
 
-    public Optional<PrintJobDtos.Created> findActiveByCheckoutId(UUID checkoutId) {
+    public Optional<PrintJobDtos.Created> findActiveByCheckoutId(
+            UUID checkoutId,
+            String documentKind
+    ) {
         return jdbcTemplate.query(
                 """
                         SELECT id, status
                         FROM print_jobs
                         WHERE checkout_session_id = :checkoutId
+                          AND document_kind = :documentKind
                           AND status IN ('PENDING', 'PRINTING')
                         ORDER BY created_at, id
                         LIMIT 1
                         """,
-                new MapSqlParameterSource("checkoutId", checkoutId),
+                new MapSqlParameterSource()
+                        .addValue("checkoutId", checkoutId)
+                        .addValue("documentKind", documentKind),
                 (resultSet, rowNumber) -> new PrintJobDtos.Created(
                         resultSet.getObject("id", UUID.class),
                         resultSet.getString("status")

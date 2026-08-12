@@ -105,3 +105,8 @@ APP_PRINTER_AGENT_TOKEN=<token-forte-compartilhado-com-o-agente>
 ```
 
 O agente Windows é distribuído separadamente em `vitrine7-printer-agent.zip` e usa o mesmo token em `printer-agent.properties`.
+
+
+## V44 - Fechamento de caixa e nota pre-pagamento
+
+A V44 cria o registro simples de fechamento diario por usuario e separa os trabalhos de impressao entre comprovante final e nota de conferencia antes do pagamento. O mesmo Printer Agent continua sendo usado; nao ha novo processo local.
