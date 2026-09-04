@@ -8,6 +8,30 @@ import type {
 
 const BAR_REPORT_HISTORY_LIMIT = 5;
 
+export function paymentLabel(method: string): string {
+  if (method.includes(",")) {
+    return method
+      .split(",")
+      .map((entry) => paymentLabel(entry.trim()))
+      .join(" + ");
+  }
+
+  switch (method) {
+    case "CASH":
+      return "Dinheiro";
+    case "PIX":
+      return "Pix";
+    case "CREDIT_CARD":
+      return "Crédito";
+    case "DEBIT_CARD":
+      return "Débito";
+    case "MULTIPLE":
+      return "Múltiplas";
+    default:
+      return method || "Não informado";
+  }
+}
+
 export function getLatestRows(entries: BarSaleHistoryEntry[]) {
   return entries
     .map((entry, index) => ({
@@ -25,4 +49,18 @@ export function getLatestRows(entries: BarSaleHistoryEntry[]) {
     })
     .slice(0, BAR_REPORT_HISTORY_LIMIT)
     .map((item) => item.entry);
+}
+
+export function createReportRequestGuard() {
+  let activeRequest = 0;
+
+  return {
+    begin() {
+      const request = ++activeRequest;
+      return () => request === activeRequest;
+    },
+    invalidate() {
+      activeRequest += 1;
+    },
+  };
 }

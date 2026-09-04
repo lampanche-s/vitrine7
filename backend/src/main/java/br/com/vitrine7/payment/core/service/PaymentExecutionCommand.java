@@ -11,6 +11,7 @@ public record PaymentExecutionCommand(
         String requestFingerprint,
         PaymentMethod method,
         PaymentProcessingMode processingMode,
+        Long amountCents,
         Long cashReceivedCents,
         String manualReason,
         Long actorUserId

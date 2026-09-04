@@ -1,0 +1,1 @@
+export { SuppliersContent } from "./SuppliersContent";

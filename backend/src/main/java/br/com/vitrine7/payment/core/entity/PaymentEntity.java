@@ -95,6 +95,15 @@ public class PaymentEntity {
     @Column(name = "reversal_reason", length = 255)
     private String reversalReason;
 
+    @Column(name = "superseded_at")
+    private OffsetDateTime supersededAt;
+
+    @Column(name = "superseded_by_user_id")
+    private Long supersededByUserId;
+
+    @Column(name = "supersede_reason", length = 255)
+    private String supersedeReason;
+
     @Column(name = "created_by_user_id", nullable = false)
     private Long createdByUserId;
 
@@ -264,6 +273,42 @@ public class PaymentEntity {
         this.reversedAt = reversedAt;
         this.reversedByUserId = actorUserId;
         this.reversalReason = normalizedReason;
+    }
+
+    public void markSuperseded(
+            Long actorUserId,
+            String reason,
+            OffsetDateTime supersededAt
+    ) {
+        if (status != PaymentStatus.APPROVED) {
+            throw new BusinessException(
+                    "PAYMENT_CANNOT_BE_SUPERSEDED",
+                    "Somente um pagamento aprovado pode ser substituído pela retomada."
+            );
+        }
+
+        String normalizedReason = reason == null
+                ? "Pagamento substituído após retomada da comanda."
+                : reason.trim().replaceAll("\\s+", " ");
+
+        if (normalizedReason.length() < 3 || normalizedReason.length() > 255) {
+            throw new BusinessException(
+                    "INVALID_PAYMENT_SUPERSEDE_REASON",
+                    "O motivo da substituição do pagamento é inválido."
+            );
+        }
+
+        if (actorUserId == null || actorUserId <= 0 || supersededAt == null) {
+            throw new BusinessException(
+                    "PAYMENT_SUPERSEDE_AUDIT_REQUIRED",
+                    "A auditoria da substituição do pagamento é obrigatória."
+            );
+        }
+
+        this.status = PaymentStatus.SUPERSEDED;
+        this.supersededAt = supersededAt;
+        this.supersededByUserId = actorUserId;
+        this.supersedeReason = normalizedReason;
     }
 
     public static String normalizeReversalReason(

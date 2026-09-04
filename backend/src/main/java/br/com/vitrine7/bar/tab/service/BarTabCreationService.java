@@ -21,6 +21,8 @@ public class BarTabCreationService {
             String normalizedName,
             UUID idempotencyKey,
             String requestFingerprint,
+            Long clientId,
+            Long employeeId,
             Long actorUserId
     ) {
         return tabRepository.saveAndFlush(
@@ -29,6 +31,8 @@ public class BarTabCreationService {
                         normalizedName,
                         idempotencyKey,
                         requestFingerprint,
+                        clientId,
+                        employeeId,
                         actorUserId
                 )
         );

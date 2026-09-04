@@ -9,6 +9,7 @@ import type {
   BarCommandStatus,
   CloseBarCommandInput,
   OpenBarCommandInput,
+  VoucherBarCommandInput,
 } from "../../entities/command";
 
 import type {
@@ -53,10 +54,22 @@ export interface BarRepository {
     input: OpenBarCommandInput
   ): Promise<BarCommand>;
 
+  reopenCommand(
+    commandId: number
+  ): Promise<BarCommand>;
+
   setCommandStatus(
     commandId: number,
     status: BarCommandStatus
   ): Promise<BarCommand>;
+
+  printPrePaymentNote(commandId: number): Promise<void>;
+
+  printItems(tabId: number): Promise<void>;
+
+  printServices(tabId: number): Promise<void>;
+
+  printLine(tabId: number, lineId: number): Promise<void>;
 
   addCommandItem(
     commandId: number,
@@ -82,6 +95,8 @@ export interface BarRepository {
   closeCommand(
     input: CloseBarCommandInput
   ): Promise<CloseBarCommandRepositoryResult>;
+
+  closeVoucher(input: VoucherBarCommandInput): Promise<BarCommand>;
 
   createCatalogEntry(
     input: BarCatalogItemInput

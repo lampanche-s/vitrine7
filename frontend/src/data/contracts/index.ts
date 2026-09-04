@@ -16,9 +16,17 @@ export type {
 } from "./clients.repository";
 
 export type {
+  SuppliersRepository,
+} from "./suppliers.repository";
+export type { EmployeesRepository, VoucherFilters } from "./employees.repository";
+
+export type {
   ReportsRepository,
   SalesReport,
+  SalesReportDaily,
+  SalesReportPerformance,
   SalesReportScope,
+  SalesReportTypeSummary,
   SystemBackupDownload,
 } from "./reports.repository";
 

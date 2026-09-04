@@ -7,10 +7,14 @@ import br.com.vitrine7.bar.tab.dto.CreateBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.PrepareBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.RenameBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.UpsertBarTabLineRequest;
+import br.com.vitrine7.bar.tab.dto.VoucherBarTabRequest;
 import br.com.vitrine7.bar.tab.entity.BarTabStatus;
 import br.com.vitrine7.bar.tab.service.BarTabCancellationService;
 import br.com.vitrine7.bar.tab.service.BarTabService;
+import br.com.vitrine7.bar.tab.service.BarTabReopenService;
 import br.com.vitrine7.common.pagination.PageResponse;
+import br.com.vitrine7.print.dto.PrintJobDtos;
+import br.com.vitrine7.print.service.OperationalOrderPrintService;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -43,6 +47,8 @@ public class BarTabController {
 
     private final BarTabService tabService;
     private final BarTabCancellationService cancellationService;
+    private final BarTabReopenService reopenService;
+    private final OperationalOrderPrintService operationalOrderPrintService;
 
     @PostMapping
     public ResponseEntity<BarTabResponse> create(
@@ -90,6 +96,31 @@ public class BarTabController {
             @PathVariable Long tabId
     ) {
         return tabService.findById(tabId);
+    }
+
+    @PostMapping("/{tabId}/print/items")
+    public PrintJobDtos.Created printItems(
+            @PathVariable Long tabId,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return operationalOrderPrintService.printAllItems(tabId, principal);
+    }
+
+    @PostMapping("/{tabId}/print/services")
+    public PrintJobDtos.Created printServices(
+            @PathVariable Long tabId,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return operationalOrderPrintService.printAllServices(tabId, principal);
+    }
+
+    @PostMapping("/{tabId}/lines/{lineId}/print")
+    public PrintJobDtos.Created printLine(
+            @PathVariable Long tabId,
+            @PathVariable Long lineId,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return operationalOrderPrintService.printLine(tabId, lineId, principal);
     }
 
     @PutMapping("/{tabId}/name")
@@ -156,6 +187,22 @@ public class BarTabController {
                         principal
                 )
         );
+    }
+
+    @PostMapping("/{tabId}/reopen")
+    public BarTabResponse reopen(
+            @PathVariable Long tabId,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return reopenService.reopen(tabId, principal);
+    }
+
+    @PostMapping("/{tabId}/voucher")
+    public BarTabResponse voucher(
+            @PathVariable Long tabId,
+            @Valid @RequestBody VoucherBarTabRequest request
+    ) {
+        return tabService.voucher(tabId, request);
     }
 
     @PostMapping("/{tabId}/cancel")

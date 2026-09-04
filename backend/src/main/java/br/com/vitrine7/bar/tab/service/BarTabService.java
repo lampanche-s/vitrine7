@@ -6,6 +6,7 @@ import br.com.vitrine7.bar.tab.dto.CreateBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.PrepareBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.RenameBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.UpsertBarTabLineRequest;
+import br.com.vitrine7.bar.tab.dto.VoucherBarTabRequest;
 import br.com.vitrine7.bar.tab.entity.BarTabEntity;
 import br.com.vitrine7.bar.tab.entity.BarTabLineEntity;
 import br.com.vitrine7.bar.tab.entity.BarTabStatus;
@@ -18,10 +19,15 @@ import br.com.vitrine7.checkout.entity.CheckoutSessionEntity;
 import br.com.vitrine7.checkout.repository.CheckoutSessionRepository;
 import br.com.vitrine7.catalog.entity.CatalogEntryEntity;
 import br.com.vitrine7.catalog.repository.CatalogEntryRepository;
+import br.com.vitrine7.client.entity.ClientEntity;
+import br.com.vitrine7.client.repository.ClientRepository;
+import br.com.vitrine7.client.service.ClientNormalizer;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.common.idempotency.IdempotencyFingerprintService;
 import br.com.vitrine7.common.pagination.PageResponse;
+import br.com.vitrine7.employee.entity.EmployeeEntity;
+import br.com.vitrine7.employee.repository.EmployeeRepository;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,7 +51,7 @@ import java.util.stream.Collectors;
 public class BarTabService {
 
     private static final String CREATE_VERSION =
-            "bar-tab-create-v1";
+            "bar-tab-create-v2";
 
     private static final String PREPARE_VERSION =
             "bar-tab-prepare-v1";
@@ -53,11 +59,15 @@ public class BarTabService {
     private final BarTabRepository tabRepository;
     private final BarTabLineRepository lineRepository;
     private final CatalogEntryRepository catalogEntryRepository;
+    private final ClientRepository clientRepository;
+    private final EmployeeRepository employeeRepository;
+    private final ClientNormalizer clientNormalizer;
     private final CheckoutSessionRepository checkoutRepository;
     private final BarTabCreationService creationService;
     private final BarTabNormalizer normalizer;
     private final IdempotencyFingerprintService fingerprintService;
     private final CheckoutProperties checkoutProperties;
+    private final BarTabStockService stockService;
     private final Clock clock;
 
     public OperationResult create(
@@ -65,13 +75,37 @@ public class BarTabService {
             CreateBarTabRequest request,
             VitrineUserPrincipal principal
     ) {
-        BarTabNormalizer.NormalizedName name =
-                normalizer.normalizeName(request.name());
+        if (request.clientId() != null && request.employeeId() != null) {
+            throw new BusinessException("BAR_TAB_MULTIPLE_OWNERS", "A comanda não pode pertencer a cliente e funcionário ao mesmo tempo.");
+        }
+        ClientEntity client = request.clientId() == null
+                ? null
+                : clientRepository
+                        .findByIdAndDeletedAtIsNull(request.clientId())
+                        .filter(ClientEntity::isActive)
+                        .orElseThrow(() -> new BusinessException(
+                                "CLIENT_NOT_AVAILABLE",
+                                "O cliente selecionado não está disponível."
+                        ));
+
+        EmployeeEntity employee = request.employeeId() == null
+                ? null
+                : employeeRepository.findByIdAndDeletedAtIsNull(request.employeeId())
+                        .orElseThrow(() -> new BusinessException(
+                                "EMPLOYEE_NOT_AVAILABLE", "O funcionário selecionado não está disponível."));
+
+        BarTabNormalizer.NormalizedName name = normalizer.normalizeName(
+                client != null ? client.getName() : employee != null ? employee.getName() : request.name()
+        );
 
         String fingerprint = fingerprintService.sha256(
                 CREATE_VERSION
                         + "|name="
                         + name.normalizedName()
+                        + "|clientId="
+                        + (client == null ? "NONE" : client.getId())
+                        + "|employeeId="
+                        + (employee == null ? "NONE" : employee.getId())
         );
 
         BarTabEntity existing = tabRepository
@@ -97,6 +131,8 @@ public class BarTabService {
                     name.normalizedName(),
                     idempotencyKey,
                     fingerprint,
+                    client == null ? null : client.getId(),
+                    employee == null ? null : employee.getId(),
                     principal.getId()
             );
 
@@ -313,6 +349,8 @@ public class BarTabService {
             );
         }
 
+        captureVehicleSnapshot(tab, lines, request.vehicleName(), request.vehiclePlate());
+
         Map<Long, CatalogEntryEntity> entriesById =
                 catalogEntryRepository
                         .findAllById(
@@ -427,6 +465,55 @@ public class BarTabService {
         return new OperationResult(buildResponse(tab), false);
     }
 
+    @Transactional
+    public BarTabResponse voucher(Long tabId, VoucherBarTabRequest request) {
+        BarTabEntity tab = getTabForUpdate(tabId);
+        tab.requireOpen();
+        if (tab.getEmployeeId() == null) {
+            throw new BusinessException(
+                    "BAR_TAB_EMPLOYEE_REQUIRED",
+                    "Somente uma comanda de funcionário pode ser registrada como Vale."
+            );
+        }
+
+        List<BarTabLineEntity> lines = lineRepository.findAllByTabIdOrderByIdAsc(tabId);
+        if (lines.isEmpty()) {
+            throw new BusinessException("BAR_TAB_EMPTY", "Adicione pelo menos um item à comanda.");
+        }
+
+        captureVehicleSnapshot(tab, lines, request.vehicleName(), request.vehiclePlate());
+        long subtotal = 0L;
+        try {
+            for (BarTabLineEntity line : lines) {
+                line.recalculate();
+                subtotal = Math.addExact(subtotal, line.getLineTotalCents());
+            }
+        } catch (ArithmeticException exception) {
+            throw new BusinessException("BAR_TAB_AMOUNT_OVERFLOW", "O total da comanda excede o limite permitido.");
+        }
+        if (subtotal <= 0) {
+            throw new BusinessException("INVALID_BAR_TAB_TOTAL", "O total da comanda deve ser maior que zero.");
+        }
+
+        stockService.validateAndDecrease(lines);
+        tab.markVoucherClosed(subtotal, OffsetDateTime.now(clock));
+        lineRepository.flush();
+        tabRepository.flush();
+        return buildResponse(tab);
+    }
+
+    private void captureVehicleSnapshot(BarTabEntity tab, List<BarTabLineEntity> lines, String requestedVehicleName, String requestedVehiclePlate) {
+        boolean hasService = lines.stream().anyMatch(line -> line.getEntryTypeSnapshot() == br.com.vitrine7.catalog.entity.CatalogEntryType.SERVICE);
+        if (!hasService) return;
+        if (tab.getClientId() != null) {
+            ClientEntity client = clientRepository.findByIdAndDeletedAtIsNull(tab.getClientId()).orElseThrow(() -> new BusinessException("CLIENT_NOT_AVAILABLE", "O cliente relacionado não está disponível."));
+            tab.captureVehicleSnapshot(client.getVehicleName(), client.getPlate());
+            return;
+        }
+        ClientNormalizer.NormalizedVehicleData vehicle = clientNormalizer.normalizeVehicle(requestedVehicleName, requestedVehiclePlate);
+        tab.captureVehicleSnapshot(vehicle.vehicleName(), vehicle.plate());
+    }
+
     private void validateAvailableStock(
             CatalogEntryEntity entry,
             int requestedQuantity
@@ -507,6 +594,11 @@ public class BarTabService {
     }
 
     private BarTabResponse buildResponse(BarTabEntity tab) {
+        ClientEntity client = tab.getClientId() == null
+                ? null
+                : clientRepository.findByIdAndDeletedAtIsNull(tab.getClientId())
+                        .orElse(null);
+
         CheckoutSessionEntity checkout =
                 tab.getCheckoutSessionId() == null
                         ? null
@@ -521,9 +613,21 @@ public class BarTabService {
                         .map(BarTabLineResponse::from)
                         .toList();
 
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        OffsetDateTime reopenUntil = tab.getClosedAt() == null
+                ? null
+                : tab.getClosedAt().plusHours(1);
+        boolean canReopen = tab.getStatus() == BarTabStatus.CLOSED
+                && reopenUntil != null
+                && !now.isAfter(reopenUntil);
+
         return new BarTabResponse(
                 tab.getId(),
                 tab.getName(),
+                tab.getClientId(),
+                client == null ? null : client.getName(),
+                tab.getEmployeeId(),
+                tab.getClosureType() == null ? null : tab.getClosureType().name(),
                 tab.getStatus().name(),
                 tab.getCheckoutSessionId(),
                 checkout == null ? null : checkout.getStatus().name(),
@@ -536,6 +640,11 @@ public class BarTabService {
                 checkout == null ? null : checkout.getCpfDigits(),
                 tab.isPrepared(),
                 tab.getPreparedAt(),
+                tab.getClosedAt(),
+                tab.getVehicleNameSnapshot(),
+                tab.getVehiclePlateSnapshot(),
+                reopenUntil,
+                canReopen,
                 lines,
                 tab.getCreatedByUserId(),
                 tab.getCreatedAt(),

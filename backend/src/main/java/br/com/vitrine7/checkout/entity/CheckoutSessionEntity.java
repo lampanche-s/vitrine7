@@ -270,6 +270,20 @@ public class CheckoutSessionEntity {
                 CheckoutStatus.PAYMENT_FAILED;
     }
 
+    public void markReadyAfterPartialPayment() {
+        if (status != CheckoutStatus.PAYMENT_PROCESSING
+                && status != CheckoutStatus.READY_FOR_PAYMENT
+                && status != CheckoutStatus.PAYMENT_FAILED) {
+            throw new BusinessException(
+                    "CHECKOUT_CANNOT_ACCEPT_PARTIAL_PAYMENT",
+                    "O checkout não pode permanecer aberto para pagamento parcial."
+            );
+        }
+
+        this.status = CheckoutStatus.READY_FOR_PAYMENT;
+        this.paidAt = null;
+    }
+
     public void markPaid(OffsetDateTime paidAt) {
         if (status == CheckoutStatus.PAID
                 || status == CheckoutStatus.FINALIZED) {

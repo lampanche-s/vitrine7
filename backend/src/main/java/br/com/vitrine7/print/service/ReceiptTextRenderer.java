@@ -56,18 +56,28 @@ public class ReceiptTextRenderer {
         if (hasText(receipt.operation().responsibleUserName())) {
             lines.addAll(labelValue("Responsavel", receipt.operation().responsibleUserName()));
         }
+        if (hasText(receipt.operation().vehicleName())) {
+            lines.addAll(labelValue("Veiculo", receipt.operation().vehicleName()));
+            lines.addAll(labelValue("Placa", receipt.operation().vehiclePlate()));
+        }
 
-        if ("REVERSED".equals(receipt.payment().status())) {
+        boolean reversed = receipt.payments().stream()
+                .allMatch(payment -> "REVERSED".equals(payment.status()));
+        if (reversed) {
             lines.addAll(labelValue("Pagamento", "Estornado"));
-            if (receipt.payment().reversedAt() != null) {
-                lines.addAll(labelValue(
-                        "Estornado em",
-                        DATE_TIME_FORMATTER.format(receipt.payment().reversedAt())
-                ));
-            }
-            if (hasText(receipt.payment().reversalReason())) {
-                lines.addAll(labelValue("Motivo", receipt.payment().reversalReason()));
-            }
+            receipt.payments().stream()
+                    .map(br.com.vitrine7.receipt.dto.ReceiptPaymentResponse::reversedAt)
+                    .filter(java.util.Objects::nonNull)
+                    .max(java.time.OffsetDateTime::compareTo)
+                    .ifPresent(value -> lines.addAll(labelValue(
+                            "Estornado em",
+                            DATE_TIME_FORMATTER.format(value)
+                    )));
+            receipt.payments().stream()
+                    .map(br.com.vitrine7.receipt.dto.ReceiptPaymentResponse::reversalReason)
+                    .filter(this::hasText)
+                    .findFirst()
+                    .ifPresent(value -> lines.addAll(labelValue("Motivo", value)));
         }
 
         lines.add(DIVIDER);
@@ -111,14 +121,21 @@ public class ReceiptTextRenderer {
         lines.add(amount("Desconto", brl(receipt.discountCents())));
         lines.add(amount("Total", brl(receipt.totalCents())));
         lines.add(DIVIDER);
-        lines.addAll(labelValue("Forma de pagamento", paymentLabel(receipt.payment().method())));
+        for (var payment : receipt.payments()) {
+            String label = receipt.payments().size() == 1
+                    ? "Forma de pagamento"
+                    : paymentLabel(payment.method());
+            String value = receipt.payments().size() == 1
+                    ? paymentLabel(payment.method())
+                    : brl(payment.approvedAmountCents());
+            lines.addAll(labelValue(label, value));
 
-        if (receipt.payment().cashReceivedCents() != null) {
-            lines.add(amount("Valor recebido", brl(receipt.payment().cashReceivedCents())));
-        }
-
-        if (receipt.payment().cashChangeCents() != null) {
-            lines.add(amount("Troco", brl(receipt.payment().cashChangeCents())));
+            if (payment.cashReceivedCents() != null) {
+                lines.add(amount("Valor recebido", brl(payment.cashReceivedCents())));
+            }
+            if (payment.cashChangeCents() != null) {
+                lines.add(amount("Troco", brl(payment.cashChangeCents())));
+            }
         }
 
         lines.add(DIVIDER);

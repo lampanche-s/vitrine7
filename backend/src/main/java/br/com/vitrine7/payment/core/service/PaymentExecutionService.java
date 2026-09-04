@@ -25,6 +25,7 @@ public class PaymentExecutionService {
     private final CheckoutSessionRepository checkoutRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentIdempotencyValidator idempotencyValidator;
+    private final CheckoutPaymentAllocationService allocationService;
     private final PaymentProperties paymentProperties;
     private final Clock clock;
 
@@ -71,18 +72,6 @@ public class PaymentExecutionService {
                 checkout
         );
 
-        paymentRepository
-                .findFirstByCheckoutSessionIdAndStatusInOrderByCreatedAtDesc(
-                        checkout.getId(),
-                        PaymentStatus.settledStatuses()
-                )
-                .ifPresent(existing -> {
-                    throw new BusinessException(
-                            "CHECKOUT_ALREADY_PAID",
-                            "Este checkout ja possui um pagamento aprovado."
-                    );
-                });
-
         if (command.processingMode()
                 == PaymentProcessingMode.MANUAL_FALLBACK
                 && command.method()
@@ -96,8 +85,13 @@ public class PaymentExecutionService {
             );
         }
 
-        long amountCents =
-                checkout.getTotalCents();
+        CheckoutPaymentAllocationService.Allocation allocation =
+                allocationService.resolve(
+                        checkout,
+                        command.amountCents()
+                );
+
+        long amountCents = allocation.requestedCents();
 
         checkout.markPaymentProcessing();
 
@@ -110,7 +104,10 @@ public class PaymentExecutionService {
         PaymentEntity saved =
                 paymentRepository.saveAndFlush(payment);
 
-        checkout.markPaid(now);
+        allocationService.applyApprovedPayment(
+                checkout,
+                now
+        );
 
         return new ExecutionResult(
                 saved,

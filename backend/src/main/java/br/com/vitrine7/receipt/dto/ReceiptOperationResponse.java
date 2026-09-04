@@ -9,6 +9,15 @@ public record ReceiptOperationResponse(
         String displayName,
         String status,
         Long responsibleUserId,
-        String responsibleUserName
+        String responsibleUserName,
+        String vehicleName,
+        String vehiclePlate
 ) {
+    public ReceiptOperationResponse(
+            String type, Long operationId, UUID checkoutId, String displayName,
+            String status, Long responsibleUserId, String responsibleUserName
+    ) {
+        this(type, operationId, checkoutId, displayName, status, responsibleUserId,
+                responsibleUserName, null, null);
+    }
 }

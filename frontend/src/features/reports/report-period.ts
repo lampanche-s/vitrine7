@@ -3,12 +3,28 @@ export type ReportScope =
   | "SERVICE";
 
 export type ReportPeriodPreset =
+  | "today"
   | "previousDay"
   | "currentWeek"
   | "previousWeek"
   | "currentMonth"
   | "previousMonth"
   | "custom";
+
+export const DEFAULT_REPORT_PERIOD: ReportPeriodPreset = "today";
+
+export function isProtectedReportPeriod(
+  period: ReportPeriodPreset
+) {
+  return period !== "today" && period !== "previousDay";
+}
+
+export function requiresPasswordForPeriodSelection(
+  activePeriod: ReportPeriodPreset,
+  nextPeriod: ReportPeriodPreset
+) {
+  return nextPeriod !== activePeriod && isProtectedReportPeriod(nextPeriod);
+}
 
 export type ReportDateRange = {
   from: string;
@@ -21,8 +37,13 @@ export type ReportDateRange = {
 
 export const reportPeriodOptions = [
   {
+    value: "today",
+    label: "Hoje",
+    description: "Somente o dia de hoje",
+  },
+  {
     value: "previousDay",
-    label: "Dia anterior",
+    label: "Ontem",
     description: "Todo o dia de ontem",
   },
   {
@@ -32,7 +53,7 @@ export const reportPeriodOptions = [
   },
   {
     value: "previousWeek",
-    label: "Semana anterior",
+    label: "Semana passada",
     description: "De segunda-feira a domingo",
   },
   {
@@ -42,7 +63,7 @@ export const reportPeriodOptions = [
   },
   {
     value: "previousMonth",
-    label: "Mês anterior",
+    label: "Mês passado",
     description: "Todo o mês anterior",
   },
   {
@@ -51,6 +72,8 @@ export const reportPeriodOptions = [
     description: "Escolha as datas inicial e final",
   },
 ] as const;
+
+export const exportReportPeriodOptions = reportPeriodOptions;
 
 function startOfDay(date: Date) {
   const result = new Date(date);
@@ -214,6 +237,13 @@ export function resolveReportDateRange(
   const today =
     startOfDay(now);
 
+  if (preset === "today") {
+    return createRange(
+      today,
+      today
+    );
+  }
+
   if (
     preset === "previousDay"
   ) {
@@ -311,4 +341,23 @@ export function resolveReportDateRange(
       true
     )
   );
+}
+
+export function resolveReportSummaryInput(
+  preset: ReportPeriodPreset,
+  customFrom: string,
+  customTo: string,
+  now = new Date()
+) {
+  const range = resolveReportDateRange(
+    preset,
+    customFrom,
+    customTo,
+    now
+  );
+
+  return {
+    from: range.startDate,
+    to: range.endDate,
+  };
 }

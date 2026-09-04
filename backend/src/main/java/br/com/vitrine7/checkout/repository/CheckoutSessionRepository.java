@@ -43,6 +43,12 @@ public interface CheckoutSessionRepository
                     br.com.vitrine7.checkout.entity.CheckoutStatus.PAYMENT_FAILED
             )
               AND checkout.expiresAt <= :now
+              AND NOT EXISTS (
+                    SELECT payment.id
+                    FROM br.com.vitrine7.payment.core.entity.PaymentEntity payment
+                    WHERE payment.checkoutSessionId = checkout.id
+                      AND payment.status = br.com.vitrine7.payment.core.entity.PaymentStatus.APPROVED
+              )
             """)
     int expireStaleSessions(
             @Param("now") OffsetDateTime now

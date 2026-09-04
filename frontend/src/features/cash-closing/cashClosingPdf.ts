@@ -20,6 +20,15 @@ function dateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+function cashPeriod(businessDate: string) {
+  const start = new Date(`${businessDate}T12:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const formatter = new Intl.DateTimeFormat("pt-BR");
+
+  return `${formatter.format(start)} 05:00 → ${formatter.format(end)} 04:59`;
+}
+
 function paymentLabel(method: string) {
   switch (method) {
     case "CASH":
@@ -30,6 +39,8 @@ function paymentLabel(method: string) {
       return "Crédito";
     case "DEBIT_CARD":
       return "Débito";
+    case "MULTIPLE":
+      return "Múltiplas";
     default:
       return method;
   }
@@ -79,6 +90,8 @@ export async function exportCashClosingPdf(
     left,
     y
   );
+  y += 5;
+  pdf.text(`Período do caixa: ${cashPeriod(report.businessDate)}`, left, y);
   y += 5;
   pdf.text(
     report.closed

@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useState,
 } from "react";
 import {
@@ -28,6 +29,7 @@ import {
 import type {
   Client,
   ClientInput,
+  ClientConsumptionHistoryEntry,
 } from "../../entities/client";
 import {
   isClientInputComplete,
@@ -54,6 +56,7 @@ export function ClientsManager({
   onUpdate,
   onSetActive,
   onRemove,
+  onLoadConsumptionHistory,
 }: {
   clients: Client[];
 
@@ -74,15 +77,23 @@ export function ClientsManager({
   onRemove: (
     clientId: number
   ) => Promise<boolean>;
+
+  onLoadConsumptionHistory: (
+    clientId: number
+  ) => Promise<ClientConsumptionHistoryEntry[]>;
 }) {
   const [form, setForm] = useState<ClientInput>(emptyClientForm);
   const [editingClientId, setEditingClientId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [clientPendingDeletionId, setClientPendingDeletionId] =
+    useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<ClientStatusFilter>("active");
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [consumptionHistory, setConsumptionHistory] = useState<ClientConsumptionHistoryEntry[]>([]);
+  const [isLoadingConsumptionHistory, setIsLoadingConsumptionHistory] = useState(false);
   const {
     showToast,
   } = useToast();
@@ -90,6 +101,77 @@ export function ClientsManager({
 
   const editingClient = clients.find((client) => client.id === editingClientId);
   const selectedClient = clients.find((client) => client.id === selectedClientId);
+  const clientPendingDeletion = clients.find(
+    (client) => client.id === clientPendingDeletionId
+  );
+
+  const consumptionSummary = useMemo(() => {
+    const services = new Map<
+      string,
+      {
+        name: string;
+        quantity: number;
+        total: number;
+      }
+    >();
+
+    const items = new Map<
+      string,
+      {
+        name: string;
+        quantity: number;
+        total: number;
+      }
+    >();
+
+    let totalSpent = 0;
+    let serviceQuantity = 0;
+    let itemQuantity = 0;
+
+    for (const entry of consumptionHistory) {
+      totalSpent += entry.total;
+
+      for (const line of entry.lines) {
+        const target =
+          line.entryType === "SERVICE"
+            ? services
+            : items;
+
+        const current = target.get(line.itemName);
+
+        target.set(line.itemName, {
+          name: line.itemName,
+          quantity:
+            (current?.quantity ?? 0) +
+            line.quantity,
+          total:
+            (current?.total ?? 0) +
+            line.total,
+        });
+
+        if (line.entryType === "SERVICE") {
+          serviceQuantity += line.quantity;
+        } else {
+          itemQuantity += line.quantity;
+        }
+      }
+    }
+
+    return {
+      totalSpent,
+      visitCount: consumptionHistory.length,
+      serviceQuantity,
+      itemQuantity,
+      services: Array.from(services.values()).sort(
+        (a, b) => b.quantity - a.quantity
+      ),
+      items: Array.from(items.values()).sort(
+        (a, b) => b.quantity - a.quantity
+      ),
+    };
+  }, [consumptionHistory]);
+
+
 
   const filteredClients = clients.filter((client) => {
     const matchesStatus =
@@ -153,6 +235,22 @@ export function ClientsManager({
 
   function closeDetailsModal() {
     setSelectedClientId(null);
+    setConsumptionHistory([]);
+    setIsLoadingConsumptionHistory(false);
+  }
+
+  async function openDetailsModal(clientId: number) {
+    setSelectedClientId(clientId);
+    setConsumptionHistory([]);
+    setIsLoadingConsumptionHistory(true);
+
+    try {
+      setConsumptionHistory(
+        await onLoadConsumptionHistory(clientId)
+      );
+    } finally {
+      setIsLoadingConsumptionHistory(false);
+    }
   }
 
   function changeStatusFilter(nextFilter: ClientStatusFilter) {
@@ -249,6 +347,14 @@ export function ClientsManager({
 
   }
 
+  function openDeleteConfirmation(clientId: number) {
+    setClientPendingDeletionId(clientId);
+  }
+
+  function closeDeleteConfirmation() {
+    setClientPendingDeletionId(null);
+  }
+
   async function handleDelete(
     clientId: number
   ) {
@@ -266,6 +372,8 @@ export function ClientsManager({
       variant: "warning",
       dedupeKey: `client-removed|${clientId}`,
     });
+
+    closeDeleteConfirmation();
 
     if (editingClientId === clientId) {
       closeFormModal();
@@ -348,7 +456,7 @@ export function ClientsManager({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setSelectedClientId(client.id)}
+                onClick={() => void openDetailsModal(client.id)}
                 leadingIcon={<Eye />}
                 aria-label={`Visualizar cliente ${client.name}`}
                 title="Visualizar"
@@ -377,7 +485,7 @@ export function ClientsManager({
         onClose={closeDetailsModal}
         labelledBy="client-details-title"
         backdropClassName="z-[220] p-4"
-        panelClassName="w-full max-w-[540px] overflow-hidden rounded-[var(--panel-radius)] border border-[var(--border-soft)] bg-[var(--surface-card)] p-[var(--panel-padding)] shadow-[var(--shadow-modal)]"
+        panelClassName="w-full max-w-[820px] max-h-[90vh] overflow-y-auto premium-scroll rounded-[var(--panel-radius)] border border-[var(--border-soft)] bg-[var(--surface-card)] p-[var(--panel-padding)] shadow-[var(--shadow-modal)]"
       >
         {selectedClient ? (
           <>
@@ -405,7 +513,7 @@ export function ClientsManager({
               />
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 sm:grid-cols-4">
               <InfoField
                 label="Telefone"
                 value={selectedClient.phone || "Não informado"}
@@ -413,6 +521,186 @@ export function ClientsManager({
               <InfoField label="Status" value={selectedClient.active ? "Ativo" : "Inativo"} />
               <InfoField label="Veículo" value={selectedClient.vehicle} />
               <InfoField label="Placa" value={selectedClient.plate} />
+            </div>
+
+            <div className="mt-5 border-t border-[var(--border-subtle)] pt-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-base)]">
+                Resumo do cliente
+              </h3>
+
+              {isLoadingConsumptionHistory ? (
+                <p className="mt-4 text-sm text-[var(--text-muted)]">
+                  Carregando dados do cliente...
+                </p>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] p-3">
+                    <span className="text-[11px] uppercase text-[var(--text-subtle)]">
+                      Total gasto
+                    </span>
+                    <strong className="mt-1 block text-sm text-[var(--text-base)]">
+                      R$ {consumptionSummary.totalSpent.toFixed(2).replace(".", ",")}
+                    </strong>
+                  </div>
+
+                  <div className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] p-3">
+                    <span className="text-[11px] uppercase text-[var(--text-subtle)]">
+                      Atendimentos
+                    </span>
+                    <strong className="mt-1 block text-sm text-[var(--text-base)]">
+                      {consumptionSummary.visitCount}
+                    </strong>
+                  </div>
+
+                  <div className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] p-3">
+                    <span className="text-[11px] uppercase text-[var(--text-subtle)]">
+                      Serviços
+                    </span>
+                    <strong className="mt-1 block text-sm text-[var(--text-base)]">
+                      {consumptionSummary.serviceQuantity}
+                    </strong>
+                  </div>
+
+                  <div className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] p-3">
+                    <span className="text-[11px] uppercase text-[var(--text-subtle)]">
+                      Itens
+                    </span>
+                    <strong className="mt-1 block text-sm text-[var(--text-base)]">
+                      {consumptionSummary.itemQuantity}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {!isLoadingConsumptionHistory && consumptionHistory.length > 0 ? (
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <section className="min-w-0">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-base)]">
+                    Serviços
+                  </h3>
+
+                  <div className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] px-3">
+                    {consumptionSummary.services.length === 0 ? (
+                      <p className="py-4 text-sm text-[var(--text-muted)]">
+                        Nenhum serviço registrado.
+                      </p>
+                    ) : (
+                      consumptionSummary.services.map((service) => (
+                        <div
+                          key={service.name}
+                          className="flex items-center justify-between gap-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-[var(--text-base)]">
+                              {service.name}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                              {service.quantity}x
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold text-[var(--text-base)]">
+                            R$ {service.total.toFixed(2).replace(".", ",")}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                <section className="min-w-0">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-base)]">
+                    Itens
+                  </h3>
+
+                  <div className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] px-3">
+                    {consumptionSummary.items.length === 0 ? (
+                      <p className="py-4 text-sm text-[var(--text-muted)]">
+                        Nenhum item registrado.
+                      </p>
+                    ) : (
+                      consumptionSummary.items.map((item) => (
+                        <div
+                          key={item.name}
+                          className="flex items-center justify-between gap-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-[var(--text-base)]">
+                              {item.name}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                              {item.quantity}x
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold text-[var(--text-base)]">
+                            R$ {item.total.toFixed(2).replace(".", ",")}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </div>
+            ) : null}
+
+            <div className="mt-5 border-t border-[var(--border-subtle)] pt-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-base)]">
+                Histórico
+              </h3>
+
+              {isLoadingConsumptionHistory ? null : consumptionHistory.length === 0 ? (
+                <p className="mt-3 text-sm text-[var(--text-muted)]">
+                  Nenhum atendimento pago vinculado a este cliente.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {consumptionHistory.map((entry) => (
+                    <div
+                      key={entry.operationId}
+                      className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface-control)] p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-sm font-semibold text-[var(--text-base)]">
+                            Comanda #{entry.operationId}
+                          </span>
+                          <p className="mt-1 text-xs text-[var(--text-subtle)]">
+                            {new Date(entry.completedAt).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                        <strong className="text-sm text-[var(--text-base)]">
+                          R$ {entry.total.toFixed(2).replace(".", ",")}
+                        </strong>
+                      </div>
+
+                      <div className="mt-3 divide-y divide-[var(--border-subtle)] border-t border-[var(--border-subtle)]">
+                        {entry.lines.map((line, index) => (
+                          <div
+                            key={`${entry.operationId}-${index}`}
+                            className="flex items-center justify-between gap-4 py-2 text-sm"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-[var(--text-base)]">
+                                {line.itemName}
+                              </p>
+                              <p className="mt-0.5 text-xs text-[var(--text-subtle)]">
+                                {line.entryType === "SERVICE" ? "Serviço" : "Item"}
+                                {" · "}
+                                {line.quantity}x
+                                {" · "}
+                                R$ {line.unitPrice.toFixed(2).replace(".", ",")} cada
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[var(--text-base)]">
+                              R$ {line.total.toFixed(2).replace(".", ",")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -446,10 +734,62 @@ export function ClientsManager({
                 fullWidth
                 leadingIcon={<Trash2 />}
                 onClick={() =>
-                  void handleDelete(selectedClient.id)
+                  openDeleteConfirmation(selectedClient.id)
                 }
               >
                 Excluir
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </AnimatedModal>
+
+      <AnimatedModal
+        open={Boolean(clientPendingDeletion)}
+        onClose={closeDeleteConfirmation}
+        labelledBy="client-delete-title"
+        describedBy="client-delete-description"
+        backdropClassName="z-[230] p-4"
+        panelClassName="w-full max-w-[440px] overflow-hidden rounded-[var(--panel-radius)] border border-[var(--color-danger-border)] bg-[var(--surface-card)] shadow-[var(--shadow-modal)]"
+      >
+        {clientPendingDeletion ? (
+          <>
+            <div className="p-5">
+              <h2
+                id="client-delete-title"
+                className="text-lg font-semibold text-[var(--text-base)]"
+              >
+                Excluir cliente?
+              </h2>
+
+              <p
+                id="client-delete-description"
+                className="mt-3 text-sm leading-6 text-[var(--text-muted)]"
+              >
+                Você está prestes a excluir{" "}
+                <strong className="text-[var(--text-base)]">
+                  {clientPendingDeletion.name}
+                </strong>
+                . Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
+              <Button
+                variant="secondary"
+                onClick={closeDeleteConfirmation}
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                variant="danger"
+                leadingIcon={<Trash2 />}
+                onClick={() =>
+                  void handleDelete(clientPendingDeletion.id)
+                }
+              >
+                Excluir cliente
               </Button>
             </div>
           </>

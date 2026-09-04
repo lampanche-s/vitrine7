@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotNull;
 
 public record CashPaymentRequest(
 
+        @Min(value = 1, message = "O valor deve ser maior que zero.")
+        @Max(value = 999_999_999, message = "O valor excede o limite permitido.")
+        Long amountCents,
+
         @NotNull(
                 message = "Informe o valor recebido."
         )
@@ -19,4 +23,7 @@ public record CashPaymentRequest(
         )
         Long cashReceivedCents
 ) {
+    public CashPaymentRequest(Long cashReceivedCents) {
+        this(null, cashReceivedCents);
+    }
 }

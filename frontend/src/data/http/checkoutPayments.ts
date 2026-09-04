@@ -81,6 +81,7 @@ type PaymentAttemptInput = {
   checkoutId: string;
   processing: CheckoutPaymentProcessing;
   method: BackendCheckoutPaymentMethod;
+  amountCents?: number;
   cashReceivedCents?: number;
   reason?: string;
 };
@@ -104,6 +105,7 @@ function getPaymentAttemptStorageKey(
     input.checkoutId,
     input.processing,
     input.method,
+    input.amountCents ?? "",
     input.cashReceivedCents ?? "",
     input.reason?.trim() ?? "",
   ].join("|");
@@ -242,6 +244,7 @@ export async function runCheckoutPayment(input: {
   checkoutId: string;
   processing: "cash";
   method: "CASH";
+  amountCents?: number;
   cashReceivedCents: number;
 }): Promise<PaymentConfirmationResponse>;
 
@@ -249,12 +252,14 @@ export async function runCheckoutPayment(input: {
   checkoutId: string;
   processing: "pix";
   method: "PIX";
+  amountCents?: number;
 }): Promise<PaymentConfirmationResponse>;
 
 export async function runCheckoutPayment(input: {
   checkoutId: string;
   processing: "manual-card";
   method: BackendCheckoutPaymentMethod;
+  amountCents?: number;
   reason: string;
 }): Promise<PaymentConfirmationResponse>;
 
@@ -262,12 +267,14 @@ export async function runCheckoutPayment(input: {
   checkoutId: string;
   processing: "terminal";
   method: BackendCheckoutPaymentMethod;
+  amountCents?: number;
 }): Promise<TerminalPaymentConfirmationResponse>;
 
 export async function runCheckoutPayment(input: {
   checkoutId: string;
   processing: CheckoutPaymentProcessing;
   method: BackendCheckoutPaymentMethod;
+  amountCents?: number;
   cashReceivedCents?: number;
   reason?: string;
 }): Promise<
@@ -289,6 +296,7 @@ export async function runCheckoutPayment(input: {
           `/checkouts/${input.checkoutId}/payments/cash`,
           {
             cashReceivedCents: input.cashReceivedCents,
+            ...(input.amountCents === undefined ? {} : { amountCents: input.amountCents }),
           },
           idempotencyOptions
         );
@@ -297,7 +305,9 @@ export async function runCheckoutPayment(input: {
       if (input.processing === "pix") {
         return httpClient.post<PaymentConfirmationResponse>(
           `/checkouts/${input.checkoutId}/payments/pix`,
-          undefined,
+          input.amountCents === undefined
+            ? undefined
+            : { amountCents: input.amountCents },
           idempotencyOptions
         );
       }
@@ -310,6 +320,7 @@ export async function runCheckoutPayment(input: {
           {
             method: input.method,
             reason: input.reason,
+            ...(input.amountCents === undefined ? {} : { amountCents: input.amountCents }),
           },
           idempotencyOptions
         );
@@ -321,6 +332,7 @@ export async function runCheckoutPayment(input: {
         `/checkouts/${input.checkoutId}/payments/terminal`,
         {
           method: input.method,
+          ...(input.amountCents === undefined ? {} : { amountCents: input.amountCents }),
         },
         {
           ...idempotencyOptions,

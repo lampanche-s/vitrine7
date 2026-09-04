@@ -57,7 +57,8 @@ public class TerminalPaymentService {
         String fingerprint =
                 createFingerprint(
                         checkoutId,
-                        request.method()
+                        request.method(),
+                        request.amountCents()
                 );
 
         PaymentEntity existing =
@@ -87,6 +88,7 @@ public class TerminalPaymentService {
                         idempotencyKey,
                         fingerprint,
                         request.method(),
+                        request.amountCents(),
                         principal.getId()
                 );
 
@@ -128,7 +130,7 @@ public class TerminalPaymentService {
                             checkoutId,
                             started.payment().getId(),
                             request.method(),
-                            started.checkout().getTotalCents(),
+                            started.payment().getAmountCents(),
                             started.activeProvider()
                                     .configuration()
                     )
@@ -240,11 +242,22 @@ public class TerminalPaymentService {
                         ? payment.getApprovedByUserId()
                         : payment.getCreatedByUserId();
 
-        finalizationService
-                .finalizeCheckoutIfSupported(
-                        payment.getCheckoutSessionId(),
-                        actorUserId
-                );
+        CheckoutSessionEntity checkout = checkoutRepository
+                .findById(payment.getCheckoutSessionId())
+                .orElse(null);
+
+        if (checkout == null
+                || (checkout.getStatus()
+                        != br.com.vitrine7.checkout.entity.CheckoutStatus.PAID
+                    && checkout.getStatus()
+                        != br.com.vitrine7.checkout.entity.CheckoutStatus.FINALIZED)) {
+            return;
+        }
+
+        finalizationService.finalizeCheckoutIfSupported(
+                payment.getCheckoutSessionId(),
+                actorUserId
+        );
     }
 
     private TerminalConfirmationResult buildResult(
@@ -300,14 +313,17 @@ public class TerminalPaymentService {
 
     private String createFingerprint(
             UUID checkoutId,
-            PaymentMethod method
+            PaymentMethod method,
+            Long amountCents
     ) {
         String canonicalPayload =
                 FINGERPRINT_VERSION
                         + "|checkoutId="
                         + checkoutId
                         + "|method="
-                        + method.name();
+                        + method.name()
+                        + "|amountCents="
+                        + amountCents;
 
         return fingerprintService.sha256(
                 canonicalPayload

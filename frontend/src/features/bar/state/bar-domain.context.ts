@@ -14,6 +14,7 @@ import type {
   BarCommandStatus,
   CloseBarCommandInput,
   OpenBarCommandInput,
+  VoucherBarCommandInput,
 } from "../../../entities/command";
 
 import type {
@@ -40,10 +41,17 @@ export type BarDomainContextValue = {
   openCommand: (
     input: OpenBarCommandInput
   ) => Promise<BarCommand | null>;
+  reopenCommand: (
+    commandId: number
+  ) => Promise<BarCommand | null>;
   setCommandStatus: (
     commandId: number,
     status: BarCommandStatus
   ) => Promise<boolean>;
+  printPrePaymentNote: (commandId: number) => Promise<boolean>;
+  printItems: (tabId: number) => Promise<boolean>;
+  printServices: (tabId: number) => Promise<boolean>;
+  printLine: (tabId: number, lineId: number) => Promise<boolean>;
   addCommandItem: (
     commandId: number,
     input: AddBarCommandItemInput
@@ -64,6 +72,7 @@ export type BarDomainContextValue = {
   closeCommand: (
     input: CloseBarCommandInput
   ) => Promise<BarCommand | null>;
+  closeVoucher: (input: VoucherBarCommandInput) => Promise<BarCommand | null>;
   createCatalogEntry: (
     input: BarCatalogItemInput
   ) => Promise<BarCatalogItem | null>;

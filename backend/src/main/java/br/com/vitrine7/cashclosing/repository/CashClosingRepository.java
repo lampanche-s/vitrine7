@@ -21,8 +21,8 @@ public class CashClosingRepository {
 
     public List<CashClosingResponse.Operation> operations(
             long userId,
-            OffsetDateTime from,
-            OffsetDateTime to
+            OffsetDateTime start,
+            OffsetDateTime endExclusive
     ) {
         return jdbcTemplate.query(
                 """
@@ -32,23 +32,29 @@ public class CashClosingRepository {
                             COALESCE(
                                 tab.closed_at,
                                 checkout.finalized_at,
-                                payment.approved_at,
+                                MAX(payment.approved_at),
                                 tab.updated_at
                             ) AS completed_at,
-                            payment.method AS payment_method,
-                            payment.status AS payment_status,
-                            payment.amount_cents,
-                            COALESCE(payment.cash_received_cents, 0) AS cash_received_cents,
-                            COALESCE(payment.cash_change_cents, 0) AS cash_change_cents
-                        FROM payments payment
+                            CASE
+                                WHEN COUNT(*) > 1 THEN 'MULTIPLE'
+                                ELSE MIN(payment.method)
+                            END AS payment_method,
+                            CASE
+                                WHEN BOOL_AND(payment.status = 'REVERSED') THEN 'REVERSED'
+                                ELSE 'APPROVED'
+                            END AS payment_status,
+                            SUM(payment.amount_cents)::bigint AS amount_cents,
+                            SUM(COALESCE(payment.cash_received_cents, 0))::bigint AS cash_received_cents,
+                            SUM(COALESCE(payment.cash_change_cents, 0))::bigint AS cash_change_cents
+                        FROM bar_tabs tab
                         JOIN checkout_sessions checkout
-                          ON checkout.id = payment.checkout_session_id
+                          ON checkout.id = tab.checkout_session_id
                          AND checkout.operation_type = 'BAR_COMMAND'
-                        JOIN bar_tabs tab
-                          ON tab.checkout_session_id = checkout.id
+                        JOIN payments payment
+                          ON payment.checkout_session_id = checkout.id
+                         AND payment.status IN ('APPROVED', 'REVERSED')
                         WHERE tab.status = 'CLOSED'
                           AND checkout.status = 'FINALIZED'
-                          AND payment.status IN ('APPROVED', 'REVERSED')
                           AND COALESCE(
                                 payment.approved_by_user_id,
                                 payment.created_by_user_id
@@ -58,19 +64,22 @@ public class CashClosingRepository {
                                 checkout.finalized_at,
                                 payment.approved_at,
                                 tab.updated_at
-                              ) >= :fromInstant
+                              ) >= :start
                           AND COALESCE(
                                 tab.closed_at,
                                 checkout.finalized_at,
                                 payment.approved_at,
                                 tab.updated_at
-                              ) < :toInstant
+                              ) < :endExclusive
+                        GROUP BY
+                            tab.id, tab.name, tab.closed_at, tab.updated_at,
+                            checkout.finalized_at
                         ORDER BY completed_at ASC, operation_id ASC
                         """,
                 new MapSqlParameterSource()
                         .addValue("userId", userId)
-                        .addValue("fromInstant", from)
-                        .addValue("toInstant", to),
+                        .addValue("start", start)
+                        .addValue("endExclusive", endExclusive),
                 (resultSet, rowNumber) -> new CashClosingResponse.Operation(
                         resultSet.getLong("operation_id"),
                         resultSet.getString("display_name"),
@@ -81,6 +90,44 @@ public class CashClosingRepository {
                         resultSet.getLong("cash_received_cents"),
                         resultSet.getLong("cash_change_cents"),
                         List.of()
+                )
+        );
+    }
+
+    public List<CashClosingResponse.PaymentBreakdown> paymentBreakdown(
+            long userId,
+            OffsetDateTime start,
+            OffsetDateTime endExclusive
+    ) {
+        return jdbcTemplate.query(
+                """
+                        SELECT
+                            payment.method,
+                            SUM(payment.amount_cents)::bigint AS amount_cents,
+                            COUNT(DISTINCT payment.checkout_session_id)::bigint AS sale_count
+                        FROM payments payment
+                        JOIN checkout_sessions checkout
+                          ON checkout.id = payment.checkout_session_id
+                         AND checkout.operation_type = 'BAR_COMMAND'
+                        JOIN bar_tabs tab
+                          ON tab.checkout_session_id = checkout.id
+                        WHERE tab.status = 'CLOSED'
+                          AND checkout.status = 'FINALIZED'
+                          AND payment.status = 'APPROVED'
+                          AND COALESCE(payment.approved_by_user_id, payment.created_by_user_id) = :userId
+                          AND COALESCE(tab.closed_at, checkout.finalized_at, payment.approved_at, tab.updated_at) >= :start
+                          AND COALESCE(tab.closed_at, checkout.finalized_at, payment.approved_at, tab.updated_at) < :endExclusive
+                        GROUP BY payment.method
+                        ORDER BY amount_cents DESC, payment.method
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("userId", userId)
+                        .addValue("start", start)
+                        .addValue("endExclusive", endExclusive),
+                (rs, rowNum) -> new CashClosingResponse.PaymentBreakdown(
+                        rs.getString("method"),
+                        rs.getLong("amount_cents"),
+                        rs.getLong("sale_count")
                 )
         );
     }
@@ -118,8 +165,8 @@ public class CashClosingRepository {
 
     public OpenCommandsSummary openCommands(
             long userId,
-            OffsetDateTime from,
-            OffsetDateTime to
+            OffsetDateTime start,
+            OffsetDateTime endExclusive
     ) {
         return jdbcTemplate.queryForObject(
                 """
@@ -129,13 +176,13 @@ public class CashClosingRepository {
                         FROM bar_tabs
                         WHERE created_by_user_id = :userId
                           AND status IN ('OPEN', 'PAYMENT_PENDING')
-                          AND created_at >= :fromInstant
-                          AND created_at < :toInstant
+                          AND created_at >= :start
+                          AND created_at < :endExclusive
                         """,
                 new MapSqlParameterSource()
                         .addValue("userId", userId)
-                        .addValue("fromInstant", from)
-                        .addValue("toInstant", to),
+                        .addValue("start", start)
+                        .addValue("endExclusive", endExclusive),
                 (resultSet, rowNumber) -> new OpenCommandsSummary(
                         resultSet.getLong("command_count"),
                         resultSet.getLong("amount_cents")

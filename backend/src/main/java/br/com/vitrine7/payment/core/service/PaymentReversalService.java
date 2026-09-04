@@ -57,14 +57,34 @@ public class PaymentReversalService {
             );
         }
 
-        payment.markReversed(
-                actorUserId,
-                reason,
-                OffsetDateTime.now(clock)
-        );
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        var approvedPayments = paymentRepository
+                .findApprovedByCheckoutForUpdate(
+                        payment.getCheckoutSessionId()
+                );
+
+        if (approvedPayments.isEmpty()) {
+            throw new BusinessException(
+                    "PAYMENT_CANNOT_BE_REVERSED",
+                    "Não há pagamentos aprovados para estornar."
+            );
+        }
+
+        for (PaymentEntity approvedPayment : approvedPayments) {
+            approvedPayment.markReversed(
+                    actorUserId,
+                    reason,
+                    now
+            );
+        }
 
         paymentRepository.flush();
 
-        return PaymentResponse.from(payment);
+        return PaymentResponse.from(
+                approvedPayments.stream()
+                        .filter(item -> item.getId().equals(paymentId))
+                        .findFirst()
+                        .orElse(approvedPayments.get(0))
+        );
     }
 }

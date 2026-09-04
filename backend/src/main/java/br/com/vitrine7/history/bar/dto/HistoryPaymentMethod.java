@@ -4,5 +4,6 @@ public enum HistoryPaymentMethod {
     CASH,
     PIX,
     CREDIT,
-    DEBIT
+    DEBIT,
+    MULTIPLE
 }

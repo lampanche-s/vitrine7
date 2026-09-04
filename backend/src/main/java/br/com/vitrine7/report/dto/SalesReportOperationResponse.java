@@ -12,6 +12,8 @@ public record SalesReportOperationResponse(
         Long discountCents,
         Long netCents,
         Integer lineCount,
-        Integer totalUnits
+        Integer totalUnits,
+        Integer itemUnits,
+        Integer serviceUnits
 ) {
 }

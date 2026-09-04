@@ -29,6 +29,14 @@ export function normalizeBarCatalogItemInput(
           )
         )
       : null,
+    ...(input.supplierId === undefined
+      ? {}
+      : {
+          supplierId:
+            input.type === "ITEM"
+              ? input.supplierId
+              : null,
+        }),
   };
 }
 

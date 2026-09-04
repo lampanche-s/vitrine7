@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
@@ -16,6 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
+import br.com.vitrine7.supplier.entity.SupplierEntity;
 
 @Entity
 @Table(name = "catalog_entries")
@@ -66,6 +69,10 @@ public class CatalogEntryEntity {
     @Column(name = "minimum_stock_quantity")
     private Integer minimumStockQuantity;
 
+    @ManyToOne
+    @JoinColumn(name = "supplier_id")
+    private SupplierEntity supplier;
+
     @CreationTimestamp
     @Column(
             name = "created_at",
@@ -100,6 +107,28 @@ public class CatalogEntryEntity {
             Integer stockQuantity,
             Integer minimumStockQuantity
     ) {
+        return create(
+                entryType,
+                name,
+                normalizedName,
+                priceCents,
+                stockEnabled,
+                stockQuantity,
+                minimumStockQuantity,
+                null
+        );
+    }
+
+    public static CatalogEntryEntity create(
+            CatalogEntryType entryType,
+            String name,
+            String normalizedName,
+            Long priceCents,
+            boolean stockEnabled,
+            Integer stockQuantity,
+            Integer minimumStockQuantity,
+            SupplierEntity supplier
+    ) {
         CatalogEntryEntity entry =
                 new CatalogEntryEntity();
 
@@ -113,6 +142,7 @@ public class CatalogEntryEntity {
                 stockQuantity,
                 minimumStockQuantity
         );
+        entry.applySupplier(entryType, supplier);
 
         return entry;
     }
@@ -124,7 +154,8 @@ public class CatalogEntryEntity {
             Long priceCents,
             boolean stockEnabled,
             Integer stockQuantity,
-            Integer minimumStockQuantity
+            Integer minimumStockQuantity,
+            SupplierEntity supplier
     ) {
         this.entryType = entryType;
         this.name = name;
@@ -136,6 +167,7 @@ public class CatalogEntryEntity {
                 stockQuantity,
                 minimumStockQuantity
         );
+        applySupplier(entryType, supplier);
     }
 
     public boolean tracksStock() {
@@ -167,9 +199,31 @@ public class CatalogEntryEntity {
         stockQuantity -= quantity;
     }
 
+    public void increaseStock(int quantity) {
+        if (!tracksStock()) {
+            return;
+        }
+
+        if (quantity <= 0 || stockQuantity == null) {
+            throw new IllegalStateException(
+                    "Quantidade inválida para devolver ao estoque."
+            );
+        }
+
+        stockQuantity = Math.addExact(stockQuantity, quantity);
+    }
+
     public void softDelete(Long actorUserId) {
         this.deletedAt = OffsetDateTime.now();
         this.deletedByUserId = actorUserId;
+    }
+
+    public void clearSupplier() {
+        this.supplier = null;
+    }
+
+    private void applySupplier(CatalogEntryType type, SupplierEntity supplier) {
+        this.supplier = type == CatalogEntryType.SERVICE ? null : supplier;
     }
 
     private void applyStockConfiguration(

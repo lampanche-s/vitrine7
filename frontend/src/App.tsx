@@ -10,6 +10,7 @@ import {
   History,
   Menu,
   NotebookTabs,
+  Truck,
   UserCog,
   Users,
   X,
@@ -34,6 +35,8 @@ import {
 import { BarContent } from "./features/bar/BarContent";
 import { Header } from "./features/layout/Header";
 import { ClientsContent } from "./features/clients";
+import { SuppliersContent } from "./features/suppliers";
+import { EmployeesContent } from "./features/employees";
 import { CashClosingContent } from "./features/cash-closing";
 import { LoginScreen } from "./features/login/LoginScreen";
 import {
@@ -54,6 +57,8 @@ type AppSection =
   | "history"
   | "catalog"
   | "clients"
+  | "employees"
+  | "suppliers"
   | "reports"
   | "cash-closing"
   | "users";
@@ -91,6 +96,18 @@ const navigationItems: NavigationItem[] = [
     permission: "clients:manage",
   },
   {
+    id: "employees",
+    label: "Vale/Consumo",
+    icon: Users,
+    permission: "clients:manage",
+  },
+  {
+    id: "suppliers",
+    label: "Fornecedores",
+    icon: Truck,
+    permission: "bar:manage-catalog",
+  },
+  {
     id: "reports",
     label: "Relatórios",
     icon: BarChart3,
@@ -113,7 +130,7 @@ const navigationItems: NavigationItem[] = [
 const barTabBySection: Record<
   Exclude<
     AppSection,
-    "clients" | "cash-closing" | "users"
+    "clients" | "employees" | "suppliers" | "cash-closing" | "users"
   >,
   TabId
 > = {
@@ -152,6 +169,12 @@ function AppContent({
     switch (activeSection) {
       case "clients":
         return <ClientsContent />;
+
+      case "employees":
+        return <EmployeesContent />;
+
+      case "suppliers":
+        return <SuppliersContent />;
 
       case "cash-closing":
         return <CashClosingContent />;

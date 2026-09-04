@@ -1,5 +1,6 @@
 package br.com.vitrine7.catalog.entity;
 
+import br.com.vitrine7.supplier.entity.SupplierEntity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -109,5 +110,41 @@ class CatalogEntryEntityTest {
                 () -> entry.decreaseStock(3)
         );
         assertEquals(2, entry.getStockQuantity());
+    }
+
+    @Test
+    void serviceNeverKeepsSupplierAndTypeChangeClearsIt() {
+        SupplierEntity supplier = SupplierEntity.create(
+                "Fornecedor",
+                "fornecedor",
+                null,
+                null,
+                null
+        );
+        CatalogEntryEntity item = CatalogEntryEntity.create(
+                CatalogEntryType.ITEM,
+                "Produto",
+                "produto",
+                1_000L,
+                false,
+                null,
+                null,
+                supplier
+        );
+
+        assertEquals(supplier, item.getSupplier());
+
+        item.update(
+                CatalogEntryType.SERVICE,
+                "Serviço",
+                "servico",
+                1_000L,
+                false,
+                null,
+                null,
+                supplier
+        );
+
+        assertNull(item.getSupplier());
     }
 }

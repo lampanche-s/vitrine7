@@ -7,6 +7,7 @@ import br.com.vitrine7.cashclosing.service.CashClosingService;
 import br.com.vitrine7.bar.tab.service.BarTabService;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
+import br.com.vitrine7.print.PrintDocumentKind;
 import br.com.vitrine7.print.dto.PrintJobDtos;
 import br.com.vitrine7.print.repository.PrintJobRepository;
 import br.com.vitrine7.receipt.dto.ReceiptResponse;
@@ -85,31 +86,52 @@ public class PrintJobService {
     ) {
         BarTabResponse tab = barTabService.findById(tabId);
 
-        if (!"PAYMENT_PENDING".equals(tab.status()) || tab.checkoutId() == null) {
+        if (!"OPEN".equals(tab.status())) {
             throw new BusinessException(
                     "BAR_TAB_NOT_READY_FOR_PREPAYMENT_PRINT",
-                    "Envie a comanda para pagamento antes de imprimir a conferencia."
+                    "A nota de conferencia so pode ser impressa durante o consumo."
             );
         }
 
-        PrintJobDtos.Created active = repository
-                .findActiveByCheckoutId(
-                        tab.checkoutId(),
-                        "PREPAYMENT_NOTE"
-                )
-                .orElse(null);
-
-        if (active != null) {
-            return active;
+        if (tab.lines().isEmpty()) {
+            throw new BusinessException(
+                    "BAR_TAB_EMPTY_FOR_PREPAYMENT_PRINT",
+                    "Adicione pelo menos um item ou servico antes de imprimir a nota."
+            );
         }
 
         UUID id = UUID.randomUUID();
-        repository.create(
+        repository.createPrePaymentNote(
                 id,
-                tab.checkoutId(),
+                tabId,
                 principal.getId(),
-                "PREPAYMENT_NOTE",
                 prePaymentNoteRenderer.render(tab)
+        );
+
+        return new PrintJobDtos.Created(id, "PENDING");
+    }
+
+    @Transactional
+    public PrintJobDtos.Created createOperationalOrder(
+            Long barTabId,
+            PrintDocumentKind documentKind,
+            String receiptText,
+            VitrineUserPrincipal principal
+    ) {
+        if (documentKind != PrintDocumentKind.ITEM_ORDER
+                && documentKind != PrintDocumentKind.SERVICE_ORDER) {
+            throw new IllegalArgumentException(
+                    "Tipo de documento inválido para pedido operacional."
+            );
+        }
+
+        UUID id = UUID.randomUUID();
+        repository.createOperationalOrder(
+                id,
+                barTabId,
+                principal.getId(),
+                documentKind.name(),
+                receiptText
         );
 
         return new PrintJobDtos.Created(id, "PENDING");

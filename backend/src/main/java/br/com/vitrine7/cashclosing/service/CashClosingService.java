@@ -10,9 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +22,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CashClosingService {
+
+    private static final LocalTime OPERATIONAL_DAY_START = LocalTime.of(5, 0);
 
     private final CashClosingRepository repository;
     private final Clock clock;
@@ -50,7 +53,7 @@ public class CashClosingService {
             VitrineUserPrincipal principal
     ) {
         CashClosingResponse current = build(day, principal, null);
-        OffsetDateTime now = OffsetDateTime.now(clock);
+        OffsetDateTime now = OffsetDateTime.now(clock.withZone(businessZone));
 
         repository.upsert(
                 principal.getId(),
@@ -88,23 +91,15 @@ public class CashClosingService {
             VitrineUserPrincipal principal,
             OffsetDateTime forcedClosedAt
     ) {
-        LocalDate today = LocalDate.now(clock.withZone(businessZone));
-        LocalDate businessDate = day == CashClosingDay.YESTERDAY
-                ? today.minusDays(1)
-                : today;
-
-        OffsetDateTime from = businessDate
-                .atStartOfDay(businessZone)
-                .toInstant()
-                .atOffset(ZoneOffset.UTC);
-        OffsetDateTime to = businessDate
-                .plusDays(1)
-                .atStartOfDay(businessZone)
-                .toInstant()
-                .atOffset(ZoneOffset.UTC);
+        OperationalPeriod period = resolveOperationalPeriod(day);
+        LocalDate businessDate = period.businessDate();
 
         List<CashClosingResponse.Operation> rawOperations =
-                repository.operations(principal.getId(), from, to);
+                repository.operations(
+                        principal.getId(),
+                        period.start(),
+                        period.endExclusive()
+                );
         List<Long> operationIds = rawOperations.stream()
                 .map(CashClosingResponse.Operation::operationId)
                 .distinct()
@@ -153,7 +148,6 @@ public class CashClosingService {
         long cashChangeCents = 0L;
         OffsetDateTime firstSaleAt = null;
         OffsetDateTime lastSaleAt = null;
-        Map<String, MutableBreakdown> breakdown = new LinkedHashMap<>();
 
         for (CashClosingResponse.Operation operation : operations) {
             if (firstSaleAt == null || operation.completedAt().isBefore(firstSaleAt)) {
@@ -176,28 +170,17 @@ public class CashClosingService {
             itemSalesCents += typeAmounts.itemCents();
             serviceSalesCents += typeAmounts.serviceCents();
 
-            if ("CASH".equals(operation.paymentMethod())) {
-                cashReceivedCents += operation.cashReceivedCents();
-                cashChangeCents += operation.cashChangeCents();
-            }
+            cashReceivedCents += operation.cashReceivedCents();
+            cashChangeCents += operation.cashChangeCents();
 
-            MutableBreakdown item = breakdown.computeIfAbsent(
-                    operation.paymentMethod(),
-                    ignored -> new MutableBreakdown()
-            );
-            item.amountCents += operation.amountCents();
-            item.saleCount++;
         }
 
         List<CashClosingResponse.PaymentBreakdown> paymentBreakdown =
-                new ArrayList<>();
-        breakdown.forEach((method, value) -> paymentBreakdown.add(
-                new CashClosingResponse.PaymentBreakdown(
-                        method,
-                        value.amountCents,
-                        value.saleCount
-                )
-        ));
+                repository.paymentBreakdown(
+                        principal.getId(),
+                        period.start(),
+                        period.endExclusive()
+                );
 
         long grossSalesCents = totalReceived + reversedCents;
         long averageTicketCents = saleCount == 0L
@@ -205,7 +188,11 @@ public class CashClosingService {
                 : Math.round((double) totalReceived / saleCount);
 
         CashClosingRepository.OpenCommandsSummary openCommands =
-                repository.openCommands(principal.getId(), from, to);
+                repository.openCommands(
+                        principal.getId(),
+                        period.start(),
+                        period.endExclusive()
+                );
 
         OffsetDateTime closedAt = forcedClosedAt != null
                 ? forcedClosedAt
@@ -267,14 +254,42 @@ public class CashClosingService {
         );
     }
 
-    private static final class MutableBreakdown {
-        private long amountCents;
-        private long saleCount;
+    OperationalPeriod resolveOperationalPeriod(CashClosingDay day) {
+        ZonedDateTime now = ZonedDateTime.now(clock.withZone(businessZone));
+        LocalDate currentBusinessDate = now.toLocalDate();
+        if (now.toLocalTime().isBefore(OPERATIONAL_DAY_START)) {
+            currentBusinessDate = currentBusinessDate.minusDays(1);
+        }
+
+        LocalDate businessDate = day == CashClosingDay.YESTERDAY
+                ? currentBusinessDate.minusDays(1)
+                : currentBusinessDate;
+        return operationalPeriodFor(businessDate);
+    }
+
+    OperationalPeriod operationalPeriodFor(LocalDate businessDate) {
+        OffsetDateTime start = businessDate
+                .atTime(OPERATIONAL_DAY_START)
+                .atZone(businessZone)
+                .toOffsetDateTime();
+        OffsetDateTime endExclusive = businessDate
+                .plusDays(1)
+                .atTime(OPERATIONAL_DAY_START)
+                .atZone(businessZone)
+                .toOffsetDateTime();
+        return new OperationalPeriod(businessDate, start, endExclusive);
     }
 
     private record TypeAmounts(
             long itemCents,
             long serviceCents
+    ) {
+    }
+
+    record OperationalPeriod(
+            LocalDate businessDate,
+            OffsetDateTime start,
+            OffsetDateTime endExclusive
     ) {
     }
 }

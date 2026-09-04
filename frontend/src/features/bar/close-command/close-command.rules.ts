@@ -10,6 +10,10 @@ import type {
 } from "../../../entities/command";
 
 import type {
+  BarCatalogItem,
+} from "../../../entities/catalog-item";
+
+import type {
   BarSaleHistoryEntry,
 } from "../../../entities/sale-history";
 
@@ -23,6 +27,19 @@ export type CloseBarCommandResult = {
   closedCommand: BarCommand;
   historyEntry: BarSaleHistoryEntry;
 };
+
+export function shouldRequestVehicleDetails(
+  command: BarCommand,
+  catalogEntries: readonly BarCatalogItem[]
+) {
+  return command.clientId == null && command.items.some((item) =>
+    catalogEntries.some(
+      (catalogEntry) =>
+        catalogEntry.id === item.catalogItemId &&
+        catalogEntry.type === "SERVICE"
+    )
+  );
+}
 
 export function closeBarCommand(
   commands: readonly BarCommand[],
@@ -56,6 +73,23 @@ export function closeBarCommand(
     );
   }
 
+  const payments = input.payments?.length
+    ? input.payments
+    : [{
+        method: input.payment ?? "Dinheiro",
+        amount: getBarCommandTotal(command),
+        cashReceived: input.cashReceived,
+      }];
+  const method = payments.length > 1
+    ? "Múltiplas" as const
+    : payments[0].method;
+  const cashReceived = payments
+    .filter((part) => part.method === "Dinheiro")
+    .reduce((sum, part) => sum + (part.cashReceived ?? part.amount), 0);
+  const cashAmount = payments
+    .filter((part) => part.method === "Dinheiro")
+    .reduce((sum, part) => sum + part.amount, 0);
+
   const historyEntry: BarSaleHistoryEntry = {
     id: getNextNumericId(historyEntries),
     origin: command.name,
@@ -67,20 +101,12 @@ export function closeBarCommand(
       total: item.unitPrice * item.quantity,
     })),
     amount: getBarCommandTotal(command),
-    method: input.payment,
+    method,
     document: input.document,
-    cashReceived:
-      input.payment === "Dinheiro"
-        ? input.cashReceived ?? getBarCommandTotal(command)
-        : undefined,
-    cashChange:
-      input.payment === "Dinheiro"
-        ? Math.max(
-            0,
-            (input.cashReceived ?? getBarCommandTotal(command)) -
-              getBarCommandTotal(command)
-          )
-        : undefined,
+    cashReceived: cashReceived > 0 ? cashReceived : undefined,
+    cashChange: cashReceived > 0
+      ? Math.max(0, cashReceived - cashAmount)
+      : undefined,
     time: input.time,
   };
 

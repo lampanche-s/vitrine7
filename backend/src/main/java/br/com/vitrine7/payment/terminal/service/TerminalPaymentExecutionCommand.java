@@ -9,6 +9,7 @@ public record TerminalPaymentExecutionCommand(
         UUID idempotencyKey,
         String requestFingerprint,
         PaymentMethod method,
+        Long amountCents,
         Long actorUserId
 ) {
 }

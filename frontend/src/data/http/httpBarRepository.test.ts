@@ -104,6 +104,105 @@ describe("httpBarRepository", () => {
     });
   });
 
+  it("solicita somente a impressão da pré-nota da comanda aberta", async () => {
+    const { httpBarRepository } =
+      await import("./httpBarRepository");
+
+    await httpBarRepository.printPrePaymentNote(31);
+
+    expect(httpClient.post).toHaveBeenCalledTimes(1);
+    expect(httpClient.post).toHaveBeenCalledWith(
+      "/bar/tabs/31/prepayment-print-jobs"
+    );
+    expect(httpClient.get).not.toHaveBeenCalled();
+    expect(httpClient.put).not.toHaveBeenCalled();
+    expect(httpClient.patch).not.toHaveBeenCalled();
+    expect(httpClient.delete).not.toHaveBeenCalled();
+  });
+
+  it("envia as três solicitações de impressão operacional sem conteúdo da linha", async () => {
+    const { httpBarRepository } =
+      await import("./httpBarRepository");
+
+    await httpBarRepository.printItems(31);
+    await httpBarRepository.printServices(31);
+    await httpBarRepository.printLine(31, 77);
+
+    expect(httpClient.post).toHaveBeenNthCalledWith(
+      1,
+      "/bar/tabs/31/print/items"
+    );
+    expect(httpClient.post).toHaveBeenNthCalledWith(
+      2,
+      "/bar/tabs/31/print/services"
+    );
+    expect(httpClient.post).toHaveBeenNthCalledWith(
+      3,
+      "/bar/tabs/31/lines/77/print"
+    );
+  });
+
+  it("carrega o catálogo de todas as páginas quando existem mais de 100 registros", async () => {
+    const catalogEntries = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `Produto ${index + 1}`,
+      type: "ITEM" as const,
+      priceCents: 1000,
+      stockEnabled: false,
+      stockQuantity: null,
+      minimumStockQuantity: null,
+      supplierId: null,
+    }));
+    httpClient.get.mockImplementation((path: string) => {
+      if (path === "/catalog?page=0&size=100") {
+        return Promise.resolve({ items: catalogEntries, page: 0, totalPages: 2 });
+      }
+      if (path === "/catalog?page=1&size=100") {
+        return Promise.resolve({
+          items: [{ ...catalogEntries[0], id: 101, name: "Produto 101" }],
+          page: 1,
+          totalPages: 2,
+        });
+      }
+      return Promise.resolve({ items: [], page: 0, totalPages: 1 });
+    });
+
+    const { httpBarRepository } = await import("./httpBarRepository");
+    const snapshot = await httpBarRepository.getSnapshot();
+
+    expect(snapshot.catalogEntries).toHaveLength(101);
+    expect(httpClient.get).toHaveBeenCalledWith("/catalog?page=1&size=100");
+  });
+
+  it("carrega comandas abertas de todas as páginas quando existem mais de 100 registros", async () => {
+    const openTabs = Array.from({ length: 100 }, (_, index) => ({
+      ...tabResponse(),
+      id: index + 1,
+      name: `Mesa ${index + 1}`,
+    }));
+    httpClient.get.mockImplementation((path: string) => {
+      if (path === "/bar/tabs?page=0&size=100&status=OPEN") {
+        return Promise.resolve({ items: openTabs, page: 0, totalPages: 2 });
+      }
+      if (path === "/bar/tabs?page=1&size=100&status=OPEN") {
+        return Promise.resolve({
+          items: [{ ...tabResponse(), id: 101, name: "Mesa 101" }],
+          page: 1,
+          totalPages: 2,
+        });
+      }
+      return Promise.resolve({ items: [], page: 0, totalPages: 1 });
+    });
+
+    const { httpBarRepository } = await import("./httpBarRepository");
+    const snapshot = await httpBarRepository.getSnapshot();
+
+    expect(snapshot.commands).toHaveLength(101);
+    expect(httpClient.get).toHaveBeenCalledWith(
+      "/bar/tabs?page=1&size=100&status=OPEN"
+    );
+  });
+
   it("cria, edita e remove uma entrada canônica", async () => {
     httpClient.post.mockResolvedValueOnce({
       id: 9,
@@ -255,6 +354,12 @@ describe("httpBarRepository", () => {
       .mockResolvedValueOnce(
         tabResponse("PAYMENT_PENDING")
       )
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({
+        ...tabResponse("PAYMENT_PENDING"),
+        status: "CLOSED",
+        checkoutStatus: "FINALIZED",
+      })
       .mockResolvedValueOnce({
         items: [
           {
@@ -294,7 +399,7 @@ describe("httpBarRepository", () => {
 
     expect(httpClient.post).toHaveBeenCalledWith(
       "/checkouts/checkout-tab-1/payments/pix",
-      undefined,
+      { amountCents: 1200 },
       expect.objectContaining({
         headers: expect.objectContaining({
           "Idempotency-Key": expect.any(String),

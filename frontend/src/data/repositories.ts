@@ -17,11 +17,17 @@ import {
 import {
   httpReportsRepository,
 } from "./http/httpReportsRepository";
+import {
+  httpSuppliersRepository,
+} from "./http/httpSuppliersRepository";
+import { httpEmployeesRepository } from "./http/httpEmployeesRepository";
 
 export const repositories = {
   admin: httpAdminRepository,
   bar: httpBarRepository,
   clients: httpClientsRepository,
+  suppliers: httpSuppliersRepository,
+  employees: httpEmployeesRepository,
   cashClosing: httpCashClosingRepository,
   reports: httpReportsRepository,
 } as const;

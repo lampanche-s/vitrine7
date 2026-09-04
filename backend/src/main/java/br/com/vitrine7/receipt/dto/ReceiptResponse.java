@@ -13,7 +13,7 @@ public record ReceiptResponse(
         long subtotalCents,
         long discountCents,
         long totalCents,
-        ReceiptPaymentResponse payment,
+        List<ReceiptPaymentResponse> payments,
         OffsetDateTime issuedAt
 ) {
 }

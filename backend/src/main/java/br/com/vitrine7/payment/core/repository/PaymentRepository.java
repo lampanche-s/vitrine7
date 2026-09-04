@@ -40,4 +40,31 @@ public interface PaymentRepository
             UUID checkoutSessionId,
             Collection<PaymentStatus> statuses
     );
+    @Query("""
+            SELECT COALESCE(SUM(payment.amountCents), 0)
+            FROM PaymentEntity payment
+            WHERE payment.checkoutSessionId = :checkoutId
+              AND payment.status = br.com.vitrine7.payment.core.entity.PaymentStatus.APPROVED
+            """)
+    long sumApprovedAmount(@Param("checkoutId") UUID checkoutId);
+
+    @Query("""
+            SELECT COUNT(payment)
+            FROM PaymentEntity payment
+            WHERE payment.checkoutSessionId = :checkoutId
+              AND payment.status = br.com.vitrine7.payment.core.entity.PaymentStatus.APPROVED
+            """)
+    long countApprovedPayments(@Param("checkoutId") UUID checkoutId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT payment
+            FROM PaymentEntity payment
+            WHERE payment.checkoutSessionId = :checkoutId
+              AND payment.status = br.com.vitrine7.payment.core.entity.PaymentStatus.APPROVED
+            ORDER BY payment.createdAt ASC
+            """)
+    List<PaymentEntity> findApprovedByCheckoutForUpdate(
+            @Param("checkoutId") UUID checkoutId
+    );
 }

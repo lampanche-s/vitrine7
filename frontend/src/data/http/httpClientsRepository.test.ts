@@ -61,6 +61,33 @@ describe("httpClientsRepository", () => {
     );
   });
 
+  it("carrega clientes de todas as páginas quando existem mais de 100 registros", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...response,
+      id: index + 1,
+      name: `Cliente ${index + 1}`,
+    }));
+    mocks.httpClient.get
+      .mockResolvedValueOnce({ items: firstPage, page: 0, totalPages: 2 })
+      .mockResolvedValueOnce({
+        items: [{ ...response, id: 101, name: "Cliente 101" }],
+        page: 1,
+        totalPages: 2,
+      });
+
+    const result = await httpClientsRepository.list();
+
+    expect(result).toHaveLength(101);
+    expect(mocks.httpClient.get).toHaveBeenNthCalledWith(
+      1,
+      "/clients?page=0&size=100&sort=name&direction=ASC"
+    );
+    expect(mocks.httpClient.get).toHaveBeenNthCalledWith(
+      2,
+      "/clients?page=1&size=100&sort=name&direction=ASC"
+    );
+  });
+
   it("usa os endpoints canônicos de criação, edição, status e exclusão", async () => {
     mocks.httpClient.post.mockResolvedValue(response);
     mocks.httpClient.put.mockResolvedValue(response);

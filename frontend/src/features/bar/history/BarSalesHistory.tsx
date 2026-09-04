@@ -7,6 +7,7 @@ import {
 
 import {
   Eye,
+  RotateCcw,
   X,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ function formatHistoryTime(value: string): string {
 
 export function BarSalesHistory({
   onLoadHistory,
+  onReopenCommand,
 }: {
   onLoadHistory: (input: {
     page: number;
@@ -85,6 +87,7 @@ export function BarSalesHistory({
     totalPages: number;
     totalElements: number;
   } | null>;
+  onReopenCommand?: (commandId: number) => Promise<unknown | null>;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [requestedPage, setRequestedPage] = useState(1);
@@ -115,6 +118,8 @@ export function BarSalesHistory({
     useState<ReceiptDocument | null>(null);
   const [isLoadingReceipt, setIsLoadingReceipt] =
     useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [reopenClock, setReopenClock] = useState(0);
 
   const visibleHistoryEntries = useMemo(
     () => historyPageState?.entries ?? [],
@@ -215,6 +220,30 @@ export function BarSalesHistory({
       can("payment:reverse")
     );
 
+  const canReopenSelectedCommand = Boolean(
+    selectedEntry?.reopenUntil &&
+    Boolean(onReopenCommand) &&
+    selectedEntry.paymentStatus === "APPROVED" &&
+    reopenClock <= new Date(selectedEntry.reopenUntil).getTime()
+  );
+
+  async function reopenSelectedCommand() {
+    if (!selectedEntry || !canReopenSelectedCommand || isReopening) {
+      return;
+    }
+
+    setIsReopening(true);
+    const reopened = await onReopenCommand?.(selectedEntry.id);
+    setIsReopening(false);
+
+    if (!reopened) {
+      return;
+    }
+
+    closeDetailsModal();
+    setHistoryReloadKey((current) => current + 1);
+  }
+
   return (
     <ContentStack>
       <PremiumCard>
@@ -276,7 +305,10 @@ export function BarSalesHistory({
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setSelectedEntryId(entry.id)}
+                  onClick={() => {
+                    setReopenClock(Date.now());
+                    setSelectedEntryId(entry.id);
+                  }}
                   leadingIcon={<Eye />}
                   aria-label={`Ver detalhes de ${entry.origin}`}
                   title="Ver detalhes"
@@ -392,8 +424,21 @@ export function BarSalesHistory({
             </div>
 
             {selectedEntry.checkoutId ||
-            canReverseSelectedPayment ? (
+            canReverseSelectedPayment ||
+            canReopenSelectedCommand ? (
               <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+                {canReopenSelectedCommand ? (
+                  <Button
+                    size="compact"
+                    variant="primary"
+                    disabled={isReopening}
+                    leadingIcon={<RotateCcw />}
+                    onClick={() => void reopenSelectedCommand()}
+                  >
+                    {isReopening ? "Retomando..." : "Retomar comanda"}
+                  </Button>
+                ) : null}
+
                 {canReverseSelectedPayment ? (
                   <Button
                     size="compact"

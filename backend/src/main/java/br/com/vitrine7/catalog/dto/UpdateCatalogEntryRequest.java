@@ -50,6 +50,8 @@ public record UpdateCatalogEntryRequest(
                 value = 999_999,
                 message = "O estoque mínimo informado excede o limite permitido."
         )
-        Integer minimumStockQuantity
+        Integer minimumStockQuantity,
+
+        Long supplierId
 ) {
 }

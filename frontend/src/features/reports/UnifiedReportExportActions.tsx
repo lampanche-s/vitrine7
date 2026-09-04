@@ -49,6 +49,8 @@ function paymentLabel(method: string) {
       return "Crédito";
     case "DEBIT_CARD":
       return "Débito";
+    case "MULTIPLE":
+      return "Múltiplas";
     default:
       return method || "Não informado";
   }
@@ -158,8 +160,16 @@ async function exportWorkbook(
 
 export function UnifiedReportExportActions({
   repository,
+  activePeriod = "currentMonth",
+  activeCustomFrom,
+  activeCustomTo,
+  getReportPassword,
 }: {
   repository: ReportsRepository;
+  activePeriod?: ReportPeriodPreset;
+  activeCustomFrom?: string;
+  activeCustomTo?: string;
+  getReportPassword?: () => string | undefined;
 }) {
   const defaults = useMemo(
     () => getDefaultCustomReportDates(),
@@ -176,6 +186,9 @@ export function UnifiedReportExportActions({
   const [isBackingUp, setIsBackingUp] = useState(false);
 
   function openExportModal(scope: ReportScope) {
+    setExportPeriod(activePeriod);
+    setCustomFrom(activeCustomFrom ?? defaults.from);
+    setCustomTo(activeCustomTo ?? defaults.to);
     setExportScope(scope);
     setExportError("");
   }
@@ -206,6 +219,7 @@ export function UnifiedReportExportActions({
         from: range.startDate,
         to: range.endDate,
         scope: exportScope,
+        reportPassword: getReportPassword?.(),
       });
 
       await exportWorkbook(exportScope, range, report);

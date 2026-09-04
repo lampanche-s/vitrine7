@@ -11,7 +11,7 @@ import {
 } from "../../components/ui";
 
 import {
-  reportPeriodOptions,
+  exportReportPeriodOptions,
   type ReportPeriodPreset,
   type ReportScope,
 } from "./report-period";
@@ -106,7 +106,7 @@ export function ReportExportModal({
           value={period}
           placeholder="Selecione o período"
           listMaxHeight={280}
-          options={reportPeriodOptions.map((option) => ({
+          options={exportReportPeriodOptions.map((option) => ({
             value: option.value,
             label: option.label,
             description: option.description,

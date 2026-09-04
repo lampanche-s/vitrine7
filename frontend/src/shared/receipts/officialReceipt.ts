@@ -33,6 +33,8 @@ export type OfficialReceiptResponse = {
     status: string;
     responsibleUserId: number | null;
     responsibleUserName: string | null;
+    vehicleName: string | null;
+    vehiclePlate: string | null;
   };
 
   lines: {
@@ -47,7 +49,7 @@ export type OfficialReceiptResponse = {
   discountCents: number;
   totalCents: number;
 
-  payment: {
+  payments: {
     paymentId: string;
     method: string;
     processingMode: string;
@@ -59,7 +61,7 @@ export type OfficialReceiptResponse = {
     terminalProvider: string | null;
     reversedAt: string | null;
     reversalReason: string | null;
-  };
+  }[];
 
   issuedAt: string;
 };
@@ -125,37 +127,44 @@ function optionalLine(
 }
 
 function paymentReversalLines(
-  payment: OfficialReceiptResponse["payment"]
+  payments: OfficialReceiptResponse["payments"]
 ): ReceiptLine[] {
-  if (payment.status !== "REVERSED") {
+  if (payments.length === 0 || !payments.every((payment) => payment.status === "REVERSED")) {
     return [];
   }
 
-  return [
-    {
-      label: "Pagamento",
-      value: "Estornado",
-    },
+  const latest = [...payments].sort((left, right) =>
+    String(right.reversedAt ?? "").localeCompare(String(left.reversedAt ?? ""))
+  )[0];
 
+  return [
+    { label: "Pagamento", value: "Estornado" },
     ...optionalLine(
       "Estornado em",
-      payment.reversedAt
-        ? formatDateTime(
-            payment.reversedAt
-          )
-        : null
+      latest?.reversedAt ? formatDateTime(latest.reversedAt) : null
     ),
-
-    ...optionalLine(
-      "Motivo",
-      payment.reversalReason
-    ),
+    ...optionalLine("Motivo", latest?.reversalReason),
   ];
 }
 
 export function mapOfficialReceipt(
   response: OfficialReceiptResponse
 ): ReceiptDocument {
+  const payments = response.payments ?? [];
+  const cashReceivedCents = payments.reduce(
+    (sum, payment) => sum + (payment.cashReceivedCents ?? 0),
+    0
+  );
+  const cashChangeCents = payments.reduce(
+    (sum, payment) => sum + (payment.cashChangeCents ?? 0),
+    0
+  );
+  const paymentDescription = payments.length <= 1
+    ? paymentLabel(payments[0]?.method ?? "")
+    : payments
+        .map((payment) => `${paymentLabel(payment.method)} ${formatBrlCurrency(payment.approvedAmountCents / 100)}`)
+        .join(" + ");
+
   const lines: ReceiptLine[] = [
     {
       label: "Tipo",
@@ -167,10 +176,11 @@ export function mapOfficialReceipt(
       response.operation.responsibleUserName
     ),
 
+    ...optionalLine("Veículo", response.operation.vehicleName),
+    ...optionalLine("Placa", response.operation.vehiclePlate),
 
-    ...paymentReversalLines(
-      response.payment
-    ),
+
+    ...paymentReversalLines(payments),
   ];
 
   return {
@@ -189,21 +199,17 @@ export function mapOfficialReceipt(
     amount: formatBrlCurrency(response.totalCents / 100),
     subtotal: formatBrlCurrency(response.subtotalCents / 100),
     discount: formatBrlCurrency(response.discountCents / 100),
-    payment: paymentLabel(response.payment.method),
+    payment: paymentDescription,
     document: "Recibo geral",
     issuedAt: formatDateTime(response.issuedAt),
     paidAmount:
-      response.payment.cashReceivedCents === null
+      cashReceivedCents <= 0
         ? undefined
-        : formatBrlCurrency(
-            response.payment.cashReceivedCents / 100
-          ),
+        : formatBrlCurrency(cashReceivedCents / 100),
     changeAmount:
-      response.payment.cashChangeCents === null
+      cashChangeCents <= 0
         ? undefined
-        : formatBrlCurrency(
-            response.payment.cashChangeCents / 100
-          ),
+        : formatBrlCurrency(cashChangeCents / 100),
     items: response.lines.map((item) => ({
       quantity: item.quantity,
       name: item.description,

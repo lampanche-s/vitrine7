@@ -54,6 +54,8 @@ function paymentLabel(method: string) {
       return "Crédito";
     case "DEBIT_CARD":
       return "Débito";
+    case "MULTIPLE":
+      return "Múltiplas";
     default:
       return method;
   }
@@ -63,6 +65,15 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR").format(
     new Date(`${value}T12:00:00`)
   );
+}
+
+function formatCashPeriod(businessDate: string) {
+  const start = new Date(`${businessDate}T12:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const formatter = new Intl.DateTimeFormat("pt-BR");
+
+  return `${formatter.format(start)} 05:00 → ${formatter.format(end)} 04:59`;
 }
 
 function entryTypeLabel(entryType: string) {
@@ -237,6 +248,11 @@ export function CashClosingContent({
                 ? `${formatDate(report.businessDate)} · ${report.userName}`
                 : "Carregando período..."}
             </p>
+            {report ? (
+              <p className="mt-1 text-sm text-[var(--text-subtle)]">
+                Período do caixa: {formatCashPeriod(report.businessDate)}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-3">

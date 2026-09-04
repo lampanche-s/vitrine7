@@ -8,6 +8,7 @@ import type {
   BarCommandStatus,
   CloseBarCommandInput,
   OpenBarCommandInput,
+  VoucherBarCommandInput,
 } from "../../entities/command";
 
 import {
@@ -58,6 +59,7 @@ type CatalogEntryResponse = {
   stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
+  supplierId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -75,11 +77,20 @@ type BarTabLineResponse = {
 type BarTabResponse = {
   id: number;
   name: string;
+  clientId: number | null;
+  clientName: string | null;
+  employeeId: number | null;
+  closureType: "PAYMENT" | "VOUCHER" | null;
   status: "OPEN" | "PAYMENT_PENDING" | "CLOSED" | "CANCELLED";
   checkoutId: string | null;
   checkoutStatus: string | null;
   totalCents: number;
   lines: BarTabLineResponse[];
+  closedAt?: string | null;
+  vehicleName?: string | null;
+  vehiclePlate?: string | null;
+  reopenUntil?: string | null;
+  canReopen?: boolean;
   createdAt: string;
 };
 
@@ -91,7 +102,7 @@ type BarHistoryResponse = {
   checkoutStatus: string | null;
   totalCents: number;
   documentType: string | null;
-  paymentMethod: "CASH" | "PIX" | "CREDIT" | "DEBIT" | null;
+  paymentMethod: "CASH" | "PIX" | "CREDIT" | "DEBIT" | "MULTIPLE" | null;
   paymentStatus: string | null;
   paymentId: string | null;
   paymentReversedAt: string | null;
@@ -101,6 +112,7 @@ type BarHistoryResponse = {
   lineCount: number;
   totalUnits: number;
   finishedAt: string;
+  reopenUntil: string | null;
 };
 
 function centsFromAmount(value: number | undefined) {
@@ -146,6 +158,10 @@ function paymentMethodFromHistory(
 
   if (method === "CASH") {
     return "Dinheiro";
+  }
+
+  if (method === "MULTIPLE") {
+    return "Múltiplas";
   }
 
   return "Cartão";
@@ -226,6 +242,7 @@ function mapHistoryEntry(entry: BarHistoryResponse): BarSaleHistoryEntry {
     ),
     time: formatHistoryTime(entry.finishedAt),
     completedAt: entry.finishedAt,
+    reopenUntil: entry.reopenUntil,
   };
 }
 
@@ -241,6 +258,7 @@ function mapCatalogEntry(
     stockQuantity: entry.stockQuantity,
     minimumStockQuantity:
       entry.minimumStockQuantity,
+    supplierId: entry.supplierId,
   };
 }
 
@@ -248,12 +266,17 @@ function mapTab(tab: BarTabResponse): BarCommand {
   return {
     id: tab.id,
     name: tab.name,
+    clientId: tab.clientId,
+    clientName: tab.clientName,
+    employeeId: tab.employeeId,
     status:
       tab.status === "PAYMENT_PENDING"
         ? "awaitingPayment"
         : "open",
     checkoutId: tab.checkoutId,
     checkoutStatus: tab.checkoutStatus,
+    vehicleName: tab.vehicleName ?? null,
+    vehiclePlate: tab.vehiclePlate ?? null,
     openedAt: new Date(tab.createdAt).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
@@ -266,7 +289,9 @@ function mapTab(tab: BarTabResponse): BarCommand {
         key: getBarCommandItemKey(
           catalogItemId
         ),
+        lineId: line.id,
         catalogItemId,
+        entryType: line.entryType,
         name: line.itemName,
         unitPrice:
           line.unitPriceCents / 100,
@@ -304,6 +329,7 @@ function catalogEntryPayload(input: {
   stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
+  supplierId?: number | null;
 }) {
   return {
     name: input.name.trim(),
@@ -322,6 +348,10 @@ function catalogEntryPayload(input: {
       input.type === "ITEM" &&
       input.stockEnabled
         ? input.minimumStockQuantity
+        : null,
+    supplierId:
+      input.type === "ITEM"
+        ? input.supplierId
         : null,
   };
 }
@@ -400,21 +430,19 @@ async function listHistoryPage(input: {
 
 async function runTerminalPayment(
   checkoutId: string,
-  payment: BarPaymentMethod
+  payment: BarPaymentMethod,
+  amountCents: number
 ) {
   const method = paymentMethodToBackend(payment);
 
-  const result =
-    await runCheckoutPayment({
-      checkoutId,
-      processing: "terminal",
-      method,
-    });
+  const result = await runCheckoutPayment({
+    checkoutId,
+    processing: "terminal",
+    method,
+    amountCents,
+  });
 
-  if (
-    result.payment.status !== "APPROVED" ||
-    result.checkout.status !== "FINALIZED"
-  ) {
+  if (result.payment.status !== "APPROVED") {
     const message =
       result.terminalTransaction.responseMessage ??
       result.terminalTransaction.errorMessage ??
@@ -428,21 +456,17 @@ async function runTerminalPayment(
 
 async function runPixPayment(
   checkoutId: string,
+  amountCents: number
 ) {
-  const result =
-    await runCheckoutPayment({
-      checkoutId,
-      processing: "pix",
-      method: "PIX",
-    });
+  const result = await runCheckoutPayment({
+    checkoutId,
+    processing: "pix",
+    method: "PIX",
+    amountCents,
+  });
 
-  if (
-    result.payment.status !== "APPROVED" ||
-    result.checkout.status !== "FINALIZED"
-  ) {
-    throw new Error(
-      "Pagamento Pix não aprovado."
-    );
+  if (result.payment.status !== "APPROVED") {
+    throw new Error("Pagamento Pix não aprovado.");
   }
 
   return result;
@@ -450,23 +474,19 @@ async function runPixPayment(
 
 async function runCashPayment(
   checkoutId: string,
+  amountCents: number,
   cashReceivedCents: number
 ) {
-  const result =
-    await runCheckoutPayment({
-      checkoutId,
-      processing: "cash",
-      method: "CASH",
-      cashReceivedCents,
-    });
+  const result = await runCheckoutPayment({
+    checkoutId,
+    processing: "cash",
+    method: "CASH",
+    amountCents,
+    cashReceivedCents,
+  });
 
-  if (
-    result.payment.status !== "APPROVED" ||
-    result.checkout.status !== "FINALIZED"
-  ) {
-    throw new Error(
-      "Pagamento em dinheiro não aprovado."
-    );
+  if (result.payment.status !== "APPROVED") {
+    throw new Error("Pagamento em dinheiro não aprovado.");
   }
 
   return result;
@@ -483,6 +503,7 @@ async function runPayment(
   if (method === "CASH") {
     return runCashPayment(
       checkoutId,
+      amountCents,
       cashReceived === undefined
         ? amountCents
         : centsFromAmount(cashReceived)
@@ -490,10 +511,24 @@ async function runPayment(
   }
 
   if (method === "PIX") {
-    return runPixPayment(checkoutId);
+    return runPixPayment(checkoutId, amountCents);
   }
 
-  return runTerminalPayment(checkoutId, payment);
+  return runTerminalPayment(checkoutId, payment, amountCents);
+}
+
+type ExistingCheckoutPayment = {
+  id: string;
+  method: BackendCheckoutPaymentMethod;
+  status: string;
+  amountCents: number;
+  cashReceivedCents: number | null;
+};
+
+async function existingApprovedPayments(checkoutId: string) {
+  return (await httpClient.get<ExistingCheckoutPayment[]>(
+    `/checkouts/${checkoutId}/payments`
+  )).filter((payment) => payment.status === "APPROVED");
 }
 
 async function getTab(tabId: number) {
@@ -527,8 +562,19 @@ export const httpBarRepository: BarRepository = {
       "/bar/tabs",
       {
         name: input.name,
+        clientId: input.clientId ?? null,
+        employeeId: input.employeeId ?? null,
       },
       headersForIdempotency(createIdempotencyKey())
+    );
+
+    return mapTab(tab);
+  },
+
+  async reopenCommand(commandId: number) {
+    const tab = await httpClient.post<BarTabResponse>(
+      `/bar/tabs/${commandId}/reopen`,
+      {}
     );
 
     return mapTab(tab);
@@ -574,6 +620,30 @@ export const httpBarRepository: BarRepository = {
     }
 
     return mapTab(tab);
+  },
+
+  async printPrePaymentNote(commandId: number) {
+    await httpClient.post(
+      `/bar/tabs/${commandId}/prepayment-print-jobs`
+    );
+  },
+
+  async printItems(tabId: number) {
+    await httpClient.post(
+      `/bar/tabs/${tabId}/print/items`
+    );
+  },
+
+  async printServices(tabId: number) {
+    await httpClient.post(
+      `/bar/tabs/${tabId}/print/services`
+    );
+  },
+
+  async printLine(tabId: number, lineId: number) {
+    await httpClient.post(
+      `/bar/tabs/${tabId}/lines/${lineId}/print`
+    );
   },
 
   async addCommandItem(
@@ -690,6 +760,8 @@ export const httpBarRepository: BarRepository = {
               documentType: documentToBackend(),
               cpf: null,
               discountCents: 0,
+              vehicleName: input.vehicleName ?? null,
+              vehiclePlate: input.vehiclePlate ?? null,
             },
             headersForIdempotency(createIdempotencyKey())
           );
@@ -700,29 +772,70 @@ export const httpBarRepository: BarRepository = {
       );
     }
 
-    const paymentResult = await runPayment(
-      prepared.checkoutId,
-      input.payment,
-      prepared.totalCents,
-      input.cashReceived
-    );
+    const parts = input.payments?.length
+      ? input.payments
+      : [{
+          method: input.payment ?? "Dinheiro",
+          amount: prepared.totalCents / 100,
+          cashReceived: input.cashReceived,
+        }];
+    const existing = await existingApprovedPayments(prepared.checkoutId);
+    const unusedExisting = [...existing];
+    let lastPaymentResult: Awaited<ReturnType<typeof runPayment>> | null = null;
 
-    const closedCommand = mapTab({
-      ...prepared,
-      status: "CLOSED",
-    });
+    for (const part of parts) {
+      const amountCents = centsFromAmount(part.amount);
+      const backendMethod = paymentMethodToBackend(part.method);
+      const cashReceivedCents = part.method === "Dinheiro"
+        ? centsFromAmount(part.cashReceived ?? part.amount)
+        : null;
 
-    const catalogEntries =
-      await refreshCatalogEntries()
-        .catch(() => null);
+      const existingIndex = unusedExisting.findIndex((payment) =>
+        payment.method === backendMethod &&
+        payment.amountCents === amountCents &&
+        (backendMethod !== "CASH" ||
+          payment.cashReceivedCents === cashReceivedCents)
+      );
+
+      if (existingIndex >= 0) {
+        unusedExisting.splice(existingIndex, 1);
+        continue;
+      }
+
+      lastPaymentResult = await runPayment(
+        prepared.checkoutId,
+        part.method,
+        amountCents,
+        part.cashReceived
+      );
+    }
+
+    const finalTab = await getTab(input.commandId);
+    if (finalTab.status !== "CLOSED" || finalTab.checkoutStatus !== "FINALIZED") {
+      throw new Error(
+        "Os pagamentos foram registrados, mas a comanda ainda possui saldo pendente."
+      );
+    }
+
+    const closedCommand = mapTab(finalTab);
+    const catalogEntries = await refreshCatalogEntries().catch(() => null);
+    const method = parts.length > 1
+      ? "Múltiplas" as const
+      : parts[0]?.method ?? "Dinheiro";
+    const cashReceived = parts
+      .filter((part) => part.method === "Dinheiro")
+      .reduce((sum, part) => sum + (part.cashReceived ?? part.amount), 0);
+    const cashAmount = parts
+      .filter((part) => part.method === "Dinheiro")
+      .reduce((sum, part) => sum + part.amount, 0);
 
     return {
       closedCommand,
       catalogEntries,
       historyEntry: {
-        id: prepared.id,
-        checkoutId: prepared.checkoutId,
-            origin: `Comanda ${prepared.name}`,
+        id: finalTab.id,
+        checkoutId: finalTab.checkoutId,
+        origin: `Comanda ${finalTab.name}`,
         description: closedCommand.items
           .map((item) => `${item.quantity}x ${item.name}`)
           .join(", "),
@@ -732,27 +845,26 @@ export const httpBarRepository: BarRepository = {
           unitPrice: item.unitPrice,
           total: item.unitPrice * item.quantity,
         })),
-        amount: prepared.totalCents / 100,
-        method: input.payment,
+        amount: finalTab.totalCents / 100,
+        method,
         document: input.document,
-        cashReceived:
-          input.payment === "Dinheiro"
-            ? input.cashReceived ?? prepared.totalCents / 100
-            : undefined,
-        cashChange:
-          input.payment === "Dinheiro"
-            ? Math.max(
-                0,
-                (input.cashReceived ?? prepared.totalCents / 100) -
-                  prepared.totalCents / 100
-              )
-            : undefined,
+        cashReceived: cashReceived > 0 ? cashReceived : undefined,
+        cashChange: cashReceived > 0
+          ? Math.max(0, cashReceived - cashAmount)
+          : undefined,
         time: input.time,
         completedAt:
-          paymentResult.checkout.finalizedAt ??
+          lastPaymentResult?.checkout.finalizedAt ??
           new Date().toISOString(),
       },
     };
+  },
+
+  async closeVoucher(input: VoucherBarCommandInput) {
+    return mapTab(await httpClient.post<BarTabResponse>(
+      `/bar/tabs/${input.commandId}/voucher`,
+      { vehicleName: input.vehicleName ?? null, vehiclePlate: input.vehiclePlate ?? null }
+    ));
   },
 
   async createCatalogEntry(input): Promise<BarCatalogItem> {

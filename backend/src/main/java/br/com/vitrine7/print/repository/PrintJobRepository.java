@@ -53,6 +53,58 @@ public class PrintJobRepository {
         );
     }
 
+    public void createPrePaymentNote(
+            UUID id,
+            Long barTabId,
+            Long requestedByUserId,
+            String receiptText
+    ) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO print_jobs (
+                            id, checkout_session_id, bar_tab_id,
+                            requested_by_user_id, document_kind, status, receipt_text
+                        ) VALUES (
+                            :id, NULL, :barTabId,
+                            :requestedByUserId, 'PREPAYMENT_NOTE', 'PENDING', :receiptText
+                        )
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("barTabId", barTabId)
+                        .addValue("requestedByUserId", requestedByUserId)
+                        .addValue("receiptText", receiptText)
+        );
+    }
+
+    public void createOperationalOrder(
+            UUID id,
+            Long barTabId,
+            Long requestedByUserId,
+            String documentKind,
+            String receiptText
+    ) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO print_jobs (
+                            id, checkout_session_id, bar_tab_id,
+                            requested_by_user_id, business_date,
+                            document_kind, status, receipt_text
+                        ) VALUES (
+                            :id, NULL, :barTabId,
+                            :requestedByUserId, NULL,
+                            :documentKind, 'PENDING', :receiptText
+                        )
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("barTabId", barTabId)
+                        .addValue("requestedByUserId", requestedByUserId)
+                        .addValue("documentKind", documentKind)
+                        .addValue("receiptText", receiptText)
+        );
+    }
+
     public void createCashClosing(
             UUID id,
             Long requestedByUserId,
@@ -134,6 +186,27 @@ public class PrintJobRepository {
                         resultSet.getString("status")
                 )
         ).stream().findFirst();
+    }
+
+    public int cancelActiveForCheckout(
+            UUID checkoutId,
+            OffsetDateTime now
+    ) {
+        return jdbcTemplate.update(
+                """
+                        UPDATE print_jobs
+                        SET
+                            status = 'FAILED',
+                            completed_at = :now,
+                            error_message = 'Impressão cancelada porque a comanda foi retomada.',
+                            updated_at = :now
+                        WHERE checkout_session_id = :checkoutId
+                          AND status IN ('PENDING', 'PRINTING')
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("checkoutId", checkoutId)
+                        .addValue("now", now)
+        );
     }
 
     public Optional<PrintJobDtos.Status> findStatus(UUID id) {

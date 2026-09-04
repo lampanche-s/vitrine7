@@ -8,11 +8,13 @@ import br.com.vitrine7.payment.core.entity.PaymentProcessingMode;
 import br.com.vitrine7.payment.core.entity.PaymentStatus;
 import br.com.vitrine7.payment.core.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,9 +42,16 @@ class PaymentReversalServiceTest {
     void marksApprovedPaymentAsReversed() {
         UUID paymentId = UUID.randomUUID();
         PaymentEntity payment = approvedPayment();
+        ReflectionTestUtils.setField(
+                payment,
+                "id",
+                paymentId
+        );
 
         when(repository.findByIdForUpdate(paymentId))
                 .thenReturn(Optional.of(payment));
+        when(repository.findApprovedByCheckoutForUpdate(payment.getCheckoutSessionId()))
+                .thenReturn(List.of(payment));
 
         PaymentResponse response =
                 service.markReversed(

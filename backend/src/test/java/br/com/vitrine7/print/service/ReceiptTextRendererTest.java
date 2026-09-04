@@ -50,7 +50,7 @@ class ReceiptTextRendererTest {
                 2_000L,
                 0L,
                 2_000L,
-                new ReceiptPaymentResponse(
+                List.of(new ReceiptPaymentResponse(
                         UUID.randomUUID(),
                         "PIX",
                         "MANUAL",
@@ -62,7 +62,7 @@ class ReceiptTextRendererTest {
                         null,
                         null,
                         null
-                ),
+                )),
                 issuedAt
         );
 

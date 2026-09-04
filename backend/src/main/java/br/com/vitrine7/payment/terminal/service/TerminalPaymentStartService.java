@@ -9,6 +9,7 @@ import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentProcessingMode;
 import br.com.vitrine7.payment.core.entity.PaymentStatus;
 import br.com.vitrine7.payment.core.repository.PaymentRepository;
+import br.com.vitrine7.payment.core.service.CheckoutPaymentAllocationService;
 import br.com.vitrine7.payment.terminal.entity.PaymentTerminalMode;
 import br.com.vitrine7.payment.terminal.entity.PaymentTerminalProvider;
 import br.com.vitrine7.payment.terminal.entity.PaymentTerminalTransactionEntity;
@@ -29,6 +30,7 @@ public class TerminalPaymentStartService {
 
     private final CheckoutSessionRepository checkoutRepository;
     private final PaymentRepository paymentRepository;
+    private final CheckoutPaymentAllocationService allocationService;
     private final PaymentTerminalTransactionRepository
             terminalTransactionRepository;
     private final ActivePaymentProviderService activePaymentProviderService;
@@ -52,17 +54,11 @@ public class TerminalPaymentStartService {
         checkout.expireIfNecessary(now);
         validateCheckout(checkout);
 
-        paymentRepository
-                .findFirstByCheckoutSessionIdAndStatusInOrderByCreatedAtDesc(
-                        checkout.getId(),
-                        PaymentStatus.settledStatuses()
-                )
-                .ifPresent(existing -> {
-                    throw new BusinessException(
-                            "CHECKOUT_ALREADY_PAID",
-                            "Este checkout ja possui um pagamento aprovado."
-                    );
-                });
+        CheckoutPaymentAllocationService.Allocation allocation =
+                allocationService.resolve(
+                        checkout,
+                        command.amountCents()
+                );
 
         ActivePaymentProviderService.ActiveProvider activeProvider =
                 activePaymentProviderService.requireActiveProvider();
@@ -82,7 +78,7 @@ public class TerminalPaymentStartService {
                         command.requestFingerprint(),
                         command.method(),
                         processingMode,
-                        checkout.getTotalCents(),
+                        allocation.requestedCents(),
                         command.actorUserId()
                 );
 
@@ -105,7 +101,7 @@ public class TerminalPaymentStartService {
                                 ? PaymentTerminalMode.SIMULATED
                                 : PaymentTerminalMode.REAL,
                         command.method(),
-                        checkout.getTotalCents(),
+                        allocation.requestedCents(),
                         command.actorUserId(),
                         now,
                         activeProvider.profile().id(),

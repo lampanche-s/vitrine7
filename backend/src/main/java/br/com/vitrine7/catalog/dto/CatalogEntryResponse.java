@@ -12,6 +12,7 @@ public record CatalogEntryResponse(
         boolean stockEnabled,
         Integer stockQuantity,
         Integer minimumStockQuantity,
+        Long supplierId,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
@@ -27,6 +28,7 @@ public record CatalogEntryResponse(
                 entry.isStockEnabled(),
                 entry.getStockQuantity(),
                 entry.getMinimumStockQuantity(),
+                entry.getSupplier() == null ? null : entry.getSupplier().getId(),
                 entry.getCreatedAt(),
                 entry.getUpdatedAt()
         );

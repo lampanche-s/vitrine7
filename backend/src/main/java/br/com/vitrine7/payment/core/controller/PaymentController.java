@@ -4,6 +4,7 @@ import br.com.vitrine7.payment.core.dto.CashPaymentRequest;
 import br.com.vitrine7.payment.core.dto.ManualPaymentRequest;
 import br.com.vitrine7.payment.core.dto.PaymentConfirmationResponse;
 import br.com.vitrine7.payment.core.dto.PaymentResponse;
+import br.com.vitrine7.payment.core.dto.PixPaymentRequest;
 import br.com.vitrine7.payment.core.dto.PaymentReversalRequest;
 import br.com.vitrine7.payment.core.service.PaymentService;
 import br.com.vitrine7.payment.core.service.PaymentReversalService;
@@ -109,6 +110,10 @@ public class PaymentController {
             @RequestHeader("Idempotency-Key")
             UUID idempotencyKey,
 
+            @Valid
+            @RequestBody(required = false)
+            PixPaymentRequest request,
+
             @AuthenticationPrincipal
             VitrineUserPrincipal principal
     ) {
@@ -116,6 +121,7 @@ public class PaymentController {
                 paymentService.confirmPix(
                         checkoutId,
                         idempotencyKey,
+                        request,
                         principal
                 );
 

@@ -124,7 +124,11 @@ export function AnimatedModal({
 
     const animationFrame =
       window.requestAnimationFrame(() => {
-        panelRef.current?.focus({
+        const target =
+          panelRef.current?.querySelector<HTMLElement>("[autofocus]") ??
+          panelRef.current;
+
+        target?.focus({
           preventScroll: true,
         });
       });

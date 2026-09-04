@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -57,6 +58,10 @@ class CashClosingServiceTest {
                 line(2L, "SERVICE", "Lavagem", 1, 2500L, 2500L),
                 line(3L, "ITEM", "Refrigerante", 1, 700L, 700L)
         ));
+        when(repository.paymentBreakdown(eq(7L), any(), any())).thenReturn(List.of(
+                new CashClosingResponse.PaymentBreakdown("CASH", 1000L, 1L),
+                new CashClosingResponse.PaymentBreakdown("PIX", 2500L, 1L)
+        ));
         when(repository.findClosedAt(eq(7L), any())).thenReturn(java.util.Optional.empty());
 
         CashClosingResponse response = service.get(CashClosingDay.TODAY, principal);
@@ -92,6 +97,98 @@ class CashClosingServiceTest {
 
         assertTrue(response.closed());
         verify(repository).upsert(eq(7L), eq(response.businessDate()), any(), eq(response.closedAt()));
+    }
+
+    @Test
+    void usesSemiOpenFiveAmOperationalPeriodForPayments() {
+        CashClosingService boundaryService = serviceAt("2026-08-28T05:00:00Z");
+        when(principal.getId()).thenReturn(7L);
+        when(principal.getName()).thenReturn("Operador");
+        when(repository.openCommands(eq(7L), any(), any())).thenReturn(
+                new CashClosingRepository.OpenCommandsSummary(0L, 0L)
+        );
+        when(repository.paymentBreakdown(eq(7L), any(), any())).thenReturn(List.of());
+        when(repository.operationLines(any())).thenReturn(List.of());
+
+        List<CashClosingResponse.Operation> boundaryOperations = List.of(
+                operation(1L, "PIX", "APPROVED", 100L, "2026-08-27T04:59:00-03:00"),
+                operation(2L, "PIX", "APPROVED", 200L, "2026-08-27T05:00:00-03:00"),
+                operation(3L, "PIX", "APPROVED", 300L, "2026-08-27T23:59:00-03:00"),
+                operation(4L, "PIX", "APPROVED", 400L, "2026-08-28T00:00:00-03:00"),
+                operation(5L, "PIX", "APPROVED", 500L, "2026-08-28T02:00:00-03:00"),
+                operation(6L, "PIX", "APPROVED", 600L, "2026-08-28T04:59:59-03:00"),
+                operation(7L, "PIX", "APPROVED", 700L, "2026-08-28T05:00:00-03:00")
+        );
+        when(repository.operations(eq(7L), any(), any())).thenAnswer(invocation -> {
+            OffsetDateTime start = invocation.getArgument(1);
+            OffsetDateTime endExclusive = invocation.getArgument(2);
+            return boundaryOperations.stream()
+                    .filter(operation -> !operation.completedAt().isBefore(start))
+                    .filter(operation -> operation.completedAt().isBefore(endExclusive))
+                    .toList();
+        });
+        when(repository.findClosedAt(eq(7L), any())).thenReturn(java.util.Optional.empty());
+
+        CashClosingResponse response = boundaryService.get(CashClosingDay.TODAY, principal);
+
+        assertEquals(LocalDate.of(2026, 8, 27), response.businessDate());
+        assertEquals(List.of(2L, 3L, 4L, 5L, 6L), response.operations().stream()
+                .map(CashClosingResponse.Operation::operationId)
+                .toList());
+        assertEquals(2000L, response.totalReceivedCents());
+    }
+
+    @Test
+    void resolvesCurrentBusinessDateAroundFiveAmBoundary() {
+        assertEquals(LocalDate.of(2026, 8, 27), serviceAt("2026-08-28T02:00:00Z")
+                .resolveOperationalPeriod(CashClosingDay.TODAY)
+                .businessDate());
+        assertEquals(LocalDate.of(2026, 8, 27), serviceAt("2026-08-28T05:00:00Z")
+                .resolveOperationalPeriod(CashClosingDay.TODAY)
+                .businessDate());
+        assertEquals(LocalDate.of(2026, 8, 27), serviceAt("2026-08-28T07:59:00Z")
+                .resolveOperationalPeriod(CashClosingDay.TODAY)
+                .businessDate());
+        assertEquals(LocalDate.of(2026, 8, 28), serviceAt("2026-08-28T08:00:00Z")
+                .resolveOperationalPeriod(CashClosingDay.TODAY)
+                .businessDate());
+        assertEquals(LocalDate.of(2026, 8, 26), serviceAt("2026-08-28T05:00:00Z")
+                .resolveOperationalPeriod(CashClosingDay.YESTERDAY)
+                .businessDate());
+    }
+
+    @Test
+    void createsAdjacentOperationalPeriodsWithoutOverlapOrGap() {
+        CashClosingService boundaryService = serviceAt("2026-08-27T15:00:00Z");
+        CashClosingService.OperationalPeriod august27 = boundaryService
+                .operationalPeriodFor(LocalDate.of(2026, 8, 27));
+        CashClosingService.OperationalPeriod august28 = boundaryService
+                .operationalPeriodFor(LocalDate.of(2026, 8, 28));
+
+        assertEquals(OffsetDateTime.parse("2026-08-27T05:00:00-03:00"), august27.start());
+        assertEquals(OffsetDateTime.parse("2026-08-28T05:00:00-03:00"), august27.endExclusive());
+        assertEquals(august27.endExclusive(), august28.start());
+        assertTrue(isIn(august27, OffsetDateTime.parse("2026-08-28T04:59:59-03:00")));
+        assertFalse(isIn(august27, OffsetDateTime.parse("2026-08-28T05:00:00-03:00")));
+        assertTrue(isIn(august28, OffsetDateTime.parse("2026-08-28T05:00:00-03:00")));
+    }
+
+    private CashClosingService serviceAt(String instant) {
+        return new CashClosingService(
+                repository,
+                Clock.fixed(Instant.parse(instant), ZoneOffset.UTC),
+                new BusinessProperties(
+                        "America/Bahia",
+                        new BusinessProperties.Establishment("Vitrine 7", null, null, null)
+                )
+        );
+    }
+
+    private boolean isIn(
+            CashClosingService.OperationalPeriod period,
+            OffsetDateTime timestamp
+    ) {
+        return !timestamp.isBefore(period.start()) && timestamp.isBefore(period.endExclusive());
     }
 
     private CashClosingResponse.Operation operation(

@@ -28,11 +28,7 @@ public class ClientNormalizer {
                 "Informe um nome válido para o cliente."
         );
 
-        String vehicleName = normalizeRequiredText(
-                rawVehicleName,
-                "INVALID_VEHICLE_NAME",
-                "Informe um veículo válido."
-        );
+        NormalizedVehicleData vehicle = normalizeVehicle(rawVehicleName, rawPlate);
 
         if (name.length() > 120) {
             throw new InvalidRequestException(
@@ -41,21 +37,25 @@ public class ClientNormalizer {
             );
         }
 
-        if (vehicleName.length() > 120) {
-            throw new InvalidRequestException(
-                    "VEHICLE_NAME_TOO_LONG",
-                    "O veículo deve possuir no máximo 120 caracteres."
-            );
-        }
-
         return new NormalizedClientData(
                 name,
                 normalizeForSearch(name),
                 normalizePhone(rawPhone),
-                vehicleName,
-                normalizeForSearch(vehicleName),
-                normalizePlate(rawPlate)
+                vehicle.vehicleName(),
+                normalizeForSearch(vehicle.vehicleName()),
+                vehicle.plate()
         );
+    }
+
+    public NormalizedVehicleData normalizeVehicle(
+            String rawVehicleName,
+            String rawPlate
+    ) {
+        String vehicleName = normalizeRequiredText(rawVehicleName, "INVALID_VEHICLE_NAME", "Informe um veículo válido.");
+        if (vehicleName.length() > 120) {
+            throw new InvalidRequestException("VEHICLE_NAME_TOO_LONG", "O veículo deve possuir no máximo 120 caracteres.");
+        }
+        return new NormalizedVehicleData(vehicleName, normalizePlate(rawPlate));
     }
 
     private String normalizeRequiredText(
@@ -132,5 +132,8 @@ public class ClientNormalizer {
             String normalizedVehicleName,
             String plate
     ) {
+    }
+
+    public record NormalizedVehicleData(String vehicleName, String plate) {
     }
 }

@@ -13,3 +13,20 @@ export type ClientInput = {
   vehicle: string;
   plate: string;
 };
+
+
+export type ClientConsumptionHistoryLine = {
+  entryType: "ITEM" | "SERVICE";
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type ClientConsumptionHistoryEntry = {
+  operationId: number;
+  completedAt: string;
+  total: number;
+  paymentStatus: string;
+  lines: ClientConsumptionHistoryLine[];
+};

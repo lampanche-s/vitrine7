@@ -3,9 +3,11 @@ export type {
   BarCommand,
   BarCommandItem,
   BarCommandStatus,
+  BarPaymentPartInput,
   CloseBarCommandInput,
   OpenBarCommandInput,
   ResolvedBarCommandItemInput,
+  VoucherBarCommandInput,
 } from "./command.types";
 
 export {

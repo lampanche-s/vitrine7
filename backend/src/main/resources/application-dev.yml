@@ -44,11 +44,12 @@ app:
     initial-admin:
       name: ${INITIAL_ADMIN_NAME:Administrador}
       username: ${INITIAL_ADMIN_USERNAME:admin}
-      password: ${INITIAL_ADMIN_PASSWORD:Vitrine7@123}
+      password: ${INITIAL_ADMIN_PASSWORD:}
 
     super-admin:
       username: ${VITRINE7_SUPERADMIN_USERNAME:superadmin}
-      password: ${VITRINE7_SUPERADMIN_PASSWORD:}
+      # Credencial simples e persistente, exclusiva para testes locais de desenvolvimento.
+      password: ${VITRINE7_SUPERADMIN_PASSWORD:123456}
 
   payment:
     manual-fallback-enabled: true

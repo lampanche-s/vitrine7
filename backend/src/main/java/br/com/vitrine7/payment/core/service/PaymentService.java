@@ -9,6 +9,7 @@ import br.com.vitrine7.common.idempotency.IdempotencyFingerprintService;
 import br.com.vitrine7.payment.core.dto.CashPaymentRequest;
 import br.com.vitrine7.payment.core.dto.ManualPaymentRequest;
 import br.com.vitrine7.payment.core.dto.PaymentConfirmationResponse;
+import br.com.vitrine7.payment.core.dto.PixPaymentRequest;
 import br.com.vitrine7.payment.core.dto.PaymentResponse;
 import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentMethod;
@@ -56,6 +57,8 @@ public class PaymentService {
                         + "|checkoutId="
                         + checkoutId
                         + "|method=CASH"
+                        + "|amountCents="
+                        + request.amountCents()
                         + "|cashReceivedCents="
                         + request.cashReceivedCents();
 
@@ -71,6 +74,7 @@ public class PaymentService {
                         fingerprint,
                         PaymentMethod.CASH,
                         PaymentProcessingMode.CASH,
+                        request.amountCents(),
                         request.cashReceivedCents(),
                         null,
                         principal.getId()
@@ -102,7 +106,9 @@ public class PaymentService {
                         + "|method="
                         + request.method().name()
                         + "|reason="
-                        + normalizedReason;
+                        + normalizedReason
+                        + "|amountCents="
+                        + request.amountCents();
 
         String fingerprint =
                 fingerprintService.sha256(
@@ -116,6 +122,7 @@ public class PaymentService {
                         fingerprint,
                         request.method(),
                         PaymentProcessingMode.MANUAL_FALLBACK,
+                        request.amountCents(),
                         null,
                         normalizedReason,
                         principal.getId()
@@ -129,11 +136,28 @@ public class PaymentService {
             UUID idempotencyKey,
             VitrineUserPrincipal principal
     ) {
+        return confirmPix(
+                checkoutId,
+                idempotencyKey,
+                null,
+                principal
+        );
+    }
+
+    public ConfirmationResult confirmPix(
+            UUID checkoutId,
+            UUID idempotencyKey,
+            PixPaymentRequest request,
+            VitrineUserPrincipal principal
+    ) {
+        Long amountCents = request == null ? null : request.amountCents();
         String canonicalPayload =
                 PIX_FINGERPRINT_VERSION
                         + "|checkoutId="
                         + checkoutId
-                        + "|method=PIX";
+                        + "|method=PIX"
+                        + "|amountCents="
+                        + amountCents;
 
         String fingerprint =
                 fingerprintService.sha256(
@@ -147,6 +171,7 @@ public class PaymentService {
                         fingerprint,
                         PaymentMethod.PIX,
                         PaymentProcessingMode.MANUAL_FALLBACK,
+                        amountCents,
                         null,
                         "Pix confirmado.",
                         principal.getId()
@@ -159,6 +184,7 @@ public class PaymentService {
     public PaymentResponse findById(UUID paymentId) {
         PaymentEntity payment =
                 paymentRepository.findById(paymentId)
+                        .filter(current -> current.getStatus() != PaymentStatus.SUPERSEDED)
                         .orElseThrow(() -> new NotFoundException(
                                 "PAYMENT_NOT_FOUND",
                                 "Pagamento nao encontrado."
@@ -183,6 +209,7 @@ public class PaymentService {
                         checkoutId
                 )
                 .stream()
+                .filter(payment -> payment.getStatus() != PaymentStatus.SUPERSEDED)
                 .map(PaymentResponse::from)
                 .toList();
     }
@@ -261,11 +288,22 @@ public class PaymentService {
                         ? payment.getApprovedByUserId()
                         : payment.getCreatedByUserId();
 
-        finalizationService
-                .finalizeCheckoutIfSupported(
-                        payment.getCheckoutSessionId(),
-                        actorUserId
-                );
+        CheckoutSessionEntity checkout = checkoutRepository
+                .findById(payment.getCheckoutSessionId())
+                .orElse(null);
+
+        if (checkout == null
+                || (checkout.getStatus()
+                        != br.com.vitrine7.checkout.entity.CheckoutStatus.PAID
+                    && checkout.getStatus()
+                        != br.com.vitrine7.checkout.entity.CheckoutStatus.FINALIZED)) {
+            return;
+        }
+
+        finalizationService.finalizeCheckoutIfSupported(
+                payment.getCheckoutSessionId(),
+                actorUserId
+        );
     }
 
     private ConfirmationResult buildResult(

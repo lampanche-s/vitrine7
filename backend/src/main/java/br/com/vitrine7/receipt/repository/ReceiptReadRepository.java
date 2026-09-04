@@ -68,7 +68,7 @@ public class ReceiptReadRepository {
         return count == null ? 0L : count.longValue();
     }
 
-    public Optional<ReceiptPaymentResponse> findReceiptPayment(UUID checkoutId) {
+    public List<ReceiptPaymentResponse> findReceiptPayments(UUID checkoutId) {
         return jdbcTemplate.query(
                         """
                                 SELECT
@@ -113,9 +113,7 @@ public class ReceiptReadRepository {
                                 resultSet.getObject("reversed_at", OffsetDateTime.class),
                                 resultSet.getString("reversal_reason")
                         )
-                )
-                .stream()
-                .findFirst();
+                );
     }
 
     public TabReceiptRow findTab(UUID checkoutId) {
@@ -128,7 +126,9 @@ public class ReceiptReadRepository {
                                     tab.status,
                                     tab.subtotal_cents,
                                     tab.discount_cents,
-                                    tab.total_cents
+                                    tab.total_cents,
+                                    tab.vehicle_name_snapshot,
+                                    tab.vehicle_plate_snapshot
                                 FROM bar_tabs tab
                                 WHERE tab.checkout_session_id = :checkoutId
                                 """,
@@ -140,7 +140,9 @@ public class ReceiptReadRepository {
                                 resultSet.getString("status"),
                                 resultSet.getLong("subtotal_cents"),
                                 resultSet.getLong("discount_cents"),
-                                resultSet.getLong("total_cents")
+                                resultSet.getLong("total_cents"),
+                                resultSet.getString("vehicle_name_snapshot"),
+                                resultSet.getString("vehicle_plate_snapshot")
                         )
                 )
                 .stream()
@@ -203,7 +205,9 @@ public class ReceiptReadRepository {
             String status,
             long subtotalCents,
             long discountCents,
-            long totalCents
+            long totalCents,
+            String vehicleName,
+            String vehiclePlate
     ) {
     }
 

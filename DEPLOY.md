@@ -14,19 +14,24 @@
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
-SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/vitrine7_db
-SPRING_DATASOURCE_USERNAME=vitrine7
-SPRING_DATASOURCE_PASSWORD=ALTERAR
-APP_SECURITY_JWT_SECRET=ALTERAR_COM_SEGREDO_FORTE
+DB_URL=jdbc:postgresql://127.0.0.1:5432/vitrine7_db
+DB_USERNAME=vitrine7
+DB_PASSWORD=CONFIGURAR_FORA_DO_REPOSITORIO
+JWT_SECRET=CONFIGURAR_FORA_DO_REPOSITORIO
+CORS_ALLOWED_ORIGINS=https://vitrine7sys.duckdns.org
 APP_ESTABLISHMENT_NAME=Vitrine 7
 APP_ESTABLISHMENT_DOCUMENT=
 APP_ESTABLISHMENT_PHONE=
 APP_ESTABLISHMENT_ADDRESS=Rua Senhor do Bonfim, Monte Gordo, Camaçari/BA
 APP_BACKUP_PG_DUMP_PATH=/usr/bin/pg_dump
 APP_BACKUP_TIMEOUT=5m
+REPORT_PROTECTED_PASSWORD=CONFIGURAR_FORA_DO_REPOSITORIO
 ```
 
-Mantenha também as variáveis de criptografia e do perfil de pagamento já usadas no ambiente atual.
+Defina `REPORT_PROTECTED_PASSWORD` somente no arquivo protegido
+`/etc/vitrine7/application.env`; nunca registre o valor real neste documento,
+no Git, no frontend ou em logs. Mantenha também as variáveis de criptografia e
+do perfil de pagamento já usadas no ambiente atual.
 
 ## Gerar artefatos no Windows
 
@@ -43,35 +48,26 @@ O pacote final será criado em:
 release/vitrine7-release.zip
 ```
 
-## Backup na VPS
+## Publicar pela VPS
+
+O procedimento autorizado recebe uma pasta versionada em
+`/home/vitrine7-deploy/releases/<release>` contendo exatamente
+`vitrine7-backend.jar` e `frontend.tar.gz`. Depois de conferir os hashes locais
+e remotos, use somente o wrapper:
 
 ```bash
-sudo systemctl stop vitrine7-backend.service
-sudo -u postgres pg_dump -Fc vitrine7_db > /opt/vitrine7/backup-pre-v41.dump
-sudo cp /opt/vitrine7/backend/vitrine7-backend.jar /opt/vitrine7/backend/vitrine7-backend.jar.rollback
-sudo cp -a /opt/vitrine7/frontend /opt/vitrine7/frontend.rollback
+ssh vitrine7-prod 'sudo -n /usr/local/sbin/vitrine7-deploy preflight <release>'
+ssh vitrine7-prod 'sudo -n /usr/local/sbin/vitrine7-deploy deploy <release>'
 ```
 
-## Publicar
-
-Copie o conteúdo do pacote para uma pasta temporária na VPS e execute:
-
-```bash
-sudo install -o vitrine7 -g vitrine7 -m 0640 backend/vitrine7-backend.jar /opt/vitrine7/backend/vitrine7-backend.jar
-sudo rm -rf /opt/vitrine7/frontend/*
-sudo cp -a frontend/. /opt/vitrine7/frontend/
-sudo chown -R vitrine7:vitrine7 /opt/vitrine7/frontend
-sudo systemctl start vitrine7-backend.service
-sudo systemctl reload nginx
-```
+O wrapper valida os artefatos, verifica o serviço e as portas protegidas, cria
+backup completo do banco/backend/frontend em `/opt/vitrine7/backups`, registra
+Flyway antes/depois e só conclui ao emitir `DEPLOY_OK`.
 
 ## Validar
 
 ```bash
-sudo systemctl status vitrine7-backend.service --no-pager
-sudo journalctl -u vitrine7-backend.service -n 120 --no-pager
-curl -fsS http://127.0.0.1:8081/actuator/health
-curl -I https://vitrine7sys.duckdns.org
+ssh vitrine7-prod 'sudo -n /usr/local/sbin/vitrine7-deploy status'
 ```
 
 Depois valide no navegador: login, Cadastro, Clientes, Comandas, quatro pagamentos, marcação de estorno, Histórico, comprovante, relatórios e download do backup `.backup`.
@@ -80,21 +76,13 @@ O backup baixado pela tela de Relatórios contém o banco completo, incluindo us
 
 ## Rollback
 
-A V41 adiciona o estoque simplificado ao catálogo. Em caso de falha grave:
+O wrapper atual restaura automaticamente o JAR anterior quando o novo backend
+não fica saudável e o Flyway não avançou; também restaura o frontend anterior
+quando sua validação falha. Se o Flyway avançar, ele interrompe sem executar
+rollback de banco. Não existe subcomando manual autorizado de rollback.
 
-```bash
-sudo systemctl stop vitrine7-backend.service
-sudo cp /opt/vitrine7/backend/vitrine7-backend.jar.rollback /opt/vitrine7/backend/vitrine7-backend.jar
-sudo rm -rf /opt/vitrine7/frontend/*
-sudo cp -a /opt/vitrine7/frontend.rollback/. /opt/vitrine7/frontend/
-sudo -u postgres dropdb --if-exists vitrine7_db
-sudo -u postgres createdb vitrine7_db
-sudo -u postgres pg_restore -d vitrine7_db /opt/vitrine7/backup-pre-v41.dump
-sudo systemctl start vitrine7-backend.service
-sudo systemctl reload nginx
-```
-
-Não remova manualmente linhas de `flyway_schema_history`.
+Nunca restaure o banco ou altere `flyway_schema_history` manualmente. Rollback
+de banco exige necessidade comprovada e aprovação explícita.
 
 ## Agente de impressão térmica
 
@@ -106,6 +94,25 @@ APP_PRINTER_AGENT_TOKEN=<token-forte-compartilhado-com-o-agente>
 
 O agente Windows é distribuído separadamente em `vitrine7-printer-agent.zip` e usa o mesmo token em `printer-agent.properties`.
 
+No Linux, execute:
+
+```bash
+cd printer-agent
+mvn clean verify
+./run-printer-agent.sh
+```
+
+## PagBank Agent
+
+No Linux, copie `pagbank-agent/pagbank-agent.env.example` para o arquivo local
+ignorado `pagbank-agent/pagbank-agent.env`, configure o pareamento sem versionar
+segredos e execute:
+
+```bash
+cd pagbank-agent
+mvn clean verify
+./run-pagbank-agent.sh
+```
 
 ## V44 - Fechamento de caixa e nota pre-pagamento
 

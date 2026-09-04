@@ -30,6 +30,7 @@ export function createInitialBarDomainState(): BarDomainState {
         stockEnabled: true,
         stockQuantity: 10,
         minimumStockQuantity: 3,
+        supplierId: null,
       },
       {
         id: 2,
@@ -39,6 +40,7 @@ export function createInitialBarDomainState(): BarDomainState {
         stockEnabled: false,
         stockQuantity: null,
         minimumStockQuantity: null,
+        supplierId: null,
       },
     ],
     historyEntries: [],

@@ -1,10 +1,15 @@
 import type {
   Client,
   ClientInput,
+  ClientConsumptionHistoryEntry,
 } from "../../entities/client";
 
 export interface ClientsRepository {
   list(): Promise<Client[]>;
+
+  consumptionHistory(
+    clientId: number
+  ): Promise<ClientConsumptionHistoryEntry[]>;
 
   create(
     input: ClientInput

@@ -5,16 +5,20 @@ import javax.print.PrintServiceLookup;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.print.Book;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public final class ThermalPrinter {
     private static final double POINTS_PER_MM = 72d / 25.4d;
+    private static final double MAX_PAGE_HEIGHT_MM = 250d;
+    private static final double EXTRA_VERTICAL_PADDING_PT = 12d;
 
     private final AgentConfig config;
 
@@ -34,9 +38,7 @@ public final class ThermalPrinter {
         job.setPrintService(printService);
         job.setJobName("Vitrine 7 - Comprovante");
         job.setCopies(1);
-
-        PageFormat pageFormat = createPageFormat(lines.size());
-        job.setPrintable(new ReceiptPrintable(lines, config), pageFormat);
+        job.setPageable(createBook(lines));
         job.print();
     }
 
@@ -57,12 +59,51 @@ public final class ThermalPrinter {
                 ));
     }
 
+    Book createBook(List<String> lines) {
+        Book book = new Book();
+
+        for (List<String> pageLines : paginate(lines)) {
+            book.append(
+                    new ReceiptPagePrintable(pageLines, config),
+                    createPageFormat(pageLines.size())
+            );
+        }
+
+        return book;
+    }
+
+    List<List<String>> paginate(List<String> lines) {
+        int maxLines = maxLinesPerPage();
+        List<List<String>> pages = new ArrayList<>();
+
+        for (int start = 0; start < lines.size(); start += maxLines) {
+            int end = Math.min(lines.size(), start + maxLines);
+            pages.add(List.copyOf(lines.subList(start, end)));
+        }
+
+        return List.copyOf(pages);
+    }
+
+    int maxLinesPerPage() {
+        double margin = config.marginMm() * POINTS_PER_MM;
+        double maximumHeight = MAX_PAGE_HEIGHT_MM * POINTS_PER_MM;
+        double availableHeight = Math.max(
+                config.lineHeightPt(),
+                maximumHeight - margin * 2d - EXTRA_VERTICAL_PADDING_PT
+        );
+
+        return Math.max(1, (int) Math.floor(availableHeight / config.lineHeightPt()));
+    }
+
     private PageFormat createPageFormat(int lineCount) {
         double width = config.paperWidthMm() * POINTS_PER_MM;
         double margin = config.marginMm() * POINTS_PER_MM;
         double minimumHeight = 60d * POINTS_PER_MM;
-        double contentHeight = lineCount * config.lineHeightPt() + margin * 2d + 12d;
-        double height = Math.max(minimumHeight, contentHeight);
+        double maximumHeight = MAX_PAGE_HEIGHT_MM * POINTS_PER_MM;
+        double contentHeight = lineCount * config.lineHeightPt()
+                + margin * 2d
+                + EXTRA_VERTICAL_PADDING_PT;
+        double height = Math.min(maximumHeight, Math.max(minimumHeight, contentHeight));
 
         Paper paper = new Paper();
         paper.setSize(width, height);
@@ -79,21 +120,17 @@ public final class ThermalPrinter {
         return format;
     }
 
-    private static final class ReceiptPrintable implements Printable {
+    private static final class ReceiptPagePrintable implements Printable {
         private final List<String> lines;
         private final AgentConfig config;
 
-        private ReceiptPrintable(List<String> lines, AgentConfig config) {
+        private ReceiptPagePrintable(List<String> lines, AgentConfig config) {
             this.lines = lines;
             this.config = config;
         }
 
         @Override
         public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) {
-            if (pageIndex > 0) {
-                return NO_SUCH_PAGE;
-            }
-
             Graphics2D graphics2D = (Graphics2D) graphics;
             graphics2D.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 

@@ -44,6 +44,22 @@ public class BarTabEntity {
     @Column(name = "checkout_session_id")
     private UUID checkoutSessionId;
 
+    @Column(name = "client_id")
+    private Long clientId;
+
+    @Column(name = "employee_id")
+    private Long employeeId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "closure_type", length = 20)
+    private BarTabClosureType closureType;
+
+    @Column(name = "vehicle_name_snapshot", length = 120)
+    private String vehicleNameSnapshot;
+
+    @Column(name = "vehicle_plate_snapshot", length = 7)
+    private String vehiclePlateSnapshot;
+
     @Column(name = "subtotal_cents", nullable = false)
     private Long subtotalCents;
 
@@ -77,6 +93,15 @@ public class BarTabEntity {
     @Column(name = "closed_at")
     private OffsetDateTime closedAt;
 
+    @Column(name = "reopened_at")
+    private OffsetDateTime reopenedAt;
+
+    @Column(name = "reopened_by_user_id")
+    private Long reopenedByUserId;
+
+    @Column(name = "reopen_count", nullable = false)
+    private Integer reopenCount;
+
     @Column(name = "cancelled_at")
     private OffsetDateTime cancelledAt;
 
@@ -106,6 +131,8 @@ public class BarTabEntity {
             String normalizedName,
             UUID idempotencyKey,
             String requestFingerprint,
+            Long clientId,
+            Long employeeId,
             Long actorUserId
     ) {
         BarTabEntity tab = new BarTabEntity();
@@ -113,6 +140,9 @@ public class BarTabEntity {
         tab.name = name;
         tab.normalizedName = normalizedName;
         tab.status = BarTabStatus.OPEN;
+        tab.clientId = clientId;
+        tab.employeeId = employeeId;
+        tab.reopenCount = 0;
         tab.subtotalCents = 0L;
         tab.discountCents = 0L;
         tab.totalCents = 0L;
@@ -121,6 +151,11 @@ public class BarTabEntity {
         tab.createdByUserId = actorUserId;
 
         return tab;
+    }
+
+    public static BarTabEntity open(String name, String normalizedName, UUID idempotencyKey,
+                                    String requestFingerprint, Long clientId, Long actorUserId) {
+        return open(name, normalizedName, idempotencyKey, requestFingerprint, clientId, null, actorUserId);
     }
 
     public void rename(String name, String normalizedName) {
@@ -158,6 +193,11 @@ public class BarTabEntity {
         this.status = BarTabStatus.PAYMENT_PENDING;
     }
 
+    public void captureVehicleSnapshot(String vehicleName, String vehiclePlate) {
+        this.vehicleNameSnapshot = vehicleName;
+        this.vehiclePlateSnapshot = vehiclePlate;
+    }
+
     public void markClosed(
             UUID finalizedCheckoutId,
             OffsetDateTime closedAt
@@ -178,6 +218,20 @@ public class BarTabEntity {
 
         this.status = BarTabStatus.CLOSED;
         this.closedAt = closedAt;
+        this.closureType = BarTabClosureType.PAYMENT;
+    }
+
+    public void markVoucherClosed(long subtotalCents, OffsetDateTime closedAt) {
+        requireOpen();
+        if (employeeId == null) {
+            throw new BusinessException("BAR_TAB_EMPLOYEE_REQUIRED", "Somente uma comanda de funcionário pode ser registrada como Vale.");
+        }
+        this.subtotalCents = subtotalCents;
+        this.discountCents = 0L;
+        this.totalCents = subtotalCents;
+        this.status = BarTabStatus.CLOSED;
+        this.closedAt = closedAt;
+        this.closureType = BarTabClosureType.VOUCHER;
     }
 
     public void cancelOpen(
@@ -195,6 +249,45 @@ public class BarTabEntity {
         this.cancelledAt = cancelledAt;
         this.cancelledByUserId = actorUserId;
         this.cancellationReason = reason;
+    }
+
+    public void reopenClosedPayment(
+            Long actorUserId,
+            OffsetDateTime reopenedAt
+    ) {
+        if (status != BarTabStatus.CLOSED || checkoutSessionId == null) {
+            throw new BusinessException(
+                    "BAR_TAB_NOT_CLOSED",
+                    "Somente uma comanda fechada pode ser retomada."
+            );
+        }
+
+        this.checkoutSessionId = null;
+        this.discountCents = 0L;
+        this.totalCents = subtotalCents;
+        this.prepareIdempotencyKey = null;
+        this.prepareRequestFingerprint = null;
+        this.preparedAt = null;
+        this.closedAt = null;
+        this.closureType = null;
+        this.reopenedAt = reopenedAt;
+        this.reopenedByUserId = actorUserId;
+        this.reopenCount = (reopenCount == null ? 0 : reopenCount) + 1;
+        this.status = BarTabStatus.OPEN;
+    }
+
+    public void reopenClosedVoucher(Long actorUserId, OffsetDateTime reopenedAt) {
+        if (status != BarTabStatus.CLOSED || closureType != BarTabClosureType.VOUCHER || checkoutSessionId != null) {
+            throw new BusinessException("BAR_TAB_NOT_VOUCHER", "A comanda não é um Vale fechado.");
+        }
+        this.closedAt = null;
+        this.closureType = null;
+        this.vehicleNameSnapshot = null;
+        this.vehiclePlateSnapshot = null;
+        this.reopenedAt = reopenedAt;
+        this.reopenedByUserId = actorUserId;
+        this.reopenCount = (reopenCount == null ? 0 : reopenCount) + 1;
+        this.status = BarTabStatus.OPEN;
     }
 
     public void reopenAfterCheckoutRelease(UUID releasedCheckoutId) {

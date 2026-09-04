@@ -182,6 +182,7 @@ public class SecurityConfig {
                         "X-Request-Id",
                         "X-Terminal-Device-Token",
                         "X-Printer-Agent-Token",
+                        "X-Report-Password",
                         "X-User-Activity",
                         "X-XSRF-TOKEN",
                         "X-Requested-With"

@@ -12,7 +12,30 @@ export type SalesReportPeriod = {
 export type SalesReportPaymentBreakdown = {
   method: string;
   amountCents: number;
+  paymentCount: number;
+  participationPercentage: number;
+};
+
+export type SalesReportTypeSummary = {
+  entryType: "ITEM" | "SERVICE";
+  revenueCents: number;
+  quantity: number;
+  participationPercentage: number;
+};
+
+export type SalesReportDaily = {
+  date: string;
   operationCount: number;
+  receivedCents: number;
+  averageTicketCents: number;
+};
+
+export type SalesReportPerformance = {
+  name: string;
+  entryType: "ITEM" | "SERVICE";
+  quantity: number;
+  revenueCents: number;
+  averagePriceCents: number;
 };
 
 export type SalesReportCatalogEntry = {
@@ -33,6 +56,8 @@ export type SalesReportOperation = {
   netCents: number;
   lineCount: number;
   totalUnits: number;
+  itemUnits: number;
+  serviceUnits: number;
 };
 
 export type SalesReportLine = {
@@ -53,7 +78,15 @@ export type SalesReport = {
   operationCount: number;
   averageTicketCents: number;
   totalUnits: number;
+  itemRevenueCents: number;
+  serviceRevenueCents: number;
+  itemUnits: number;
+  serviceUnits: number;
+  distribution: SalesReportTypeSummary[];
   byPaymentMethod: SalesReportPaymentBreakdown[];
+  dailyEvolution: SalesReportDaily[];
+  servicePerformance: SalesReportPerformance[];
+  productPerformance: SalesReportPerformance[];
   topEntries: SalesReportCatalogEntry[];
   latestOperations: SalesReportOperation[];
   operations: SalesReportOperation[];
@@ -70,13 +103,17 @@ export interface ReportsRepository {
     from?: string;
     to?: string;
     scope?: SalesReportScope;
+    reportPassword?: string;
   }): Promise<SalesReport>;
 
   export(input: {
     from: string;
     to: string;
     scope: Exclude<SalesReportScope, "ALL">;
+    reportPassword?: string;
   }): Promise<SalesReport>;
+
+  verifyProtectedReportPassword(password: string): Promise<void>;
 
   downloadSystemBackup(): Promise<SystemBackupDownload>;
 }

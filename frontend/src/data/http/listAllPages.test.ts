@@ -11,21 +11,27 @@ import {
 
 describe("listAllPages", () => {
   it("carrega todas as páginas na ordem", async () => {
+    const firstPage = Array.from(
+      { length: 100 },
+      (_, index) => index + 1
+    );
     const loadPage = vi.fn()
       .mockResolvedValueOnce({
-        items: [1, 2],
+        items: firstPage,
         page: 0,
         totalPages: 2,
       })
       .mockResolvedValueOnce({
-        items: [3],
+        items: [101],
         page: 1,
         totalPages: 2,
       });
 
-    await expect(
-      listAllPages(loadPage)
-    ).resolves.toEqual([1, 2, 3]);
+    const result = await listAllPages(loadPage);
+
+    expect(result).toHaveLength(101);
+    expect(result[0]).toBe(1);
+    expect(result[100]).toBe(101);
 
     expect(loadPage).toHaveBeenNthCalledWith(
       1,

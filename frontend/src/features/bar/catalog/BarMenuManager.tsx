@@ -1,6 +1,7 @@
 import {
   useMemo,
   useState,
+  useEffect,
 } from "react";
 
 import {
@@ -44,6 +45,8 @@ import {
 import {
   formatBrlCurrency,
 } from "../../../shared/lib/currency";
+import type { Supplier } from "../../../entities/supplier";
+import { repositories } from "../../../data/repositories";
 
 type CatalogForm = {
   name: string;
@@ -52,6 +55,7 @@ type CatalogForm = {
   stockEnabled: boolean;
   stockQuantity: string;
   minimumStockQuantity: string;
+  supplierId: string;
 };
 
 const emptyCatalogForm: CatalogForm = {
@@ -61,6 +65,7 @@ const emptyCatalogForm: CatalogForm = {
   stockEnabled: false,
   stockQuantity: "0",
   minimumStockQuantity: "0",
+  supplierId: "",
 };
 
 const CATALOG_RECORDS_PAGE_SIZE = 7;
@@ -107,6 +112,15 @@ export function BarMenuManager({
     useState("");
   const [currentPage, setCurrentPage] =
     useState(1);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    repositories.suppliers.list().then((loaded) => {
+      if (active) setSuppliers(loaded);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const records = useMemo(
     () =>
@@ -213,6 +227,10 @@ export function BarMenuManager({
         type === "ITEM"
           ? current.stockEnabled
           : false,
+      supplierId:
+        type === "ITEM"
+          ? current.supplierId
+          : "",
     }));
   }
 
@@ -252,6 +270,10 @@ export function BarMenuManager({
         entry.minimumStockQuantity === null
           ? "0"
           : String(entry.minimumStockQuantity),
+      supplierId:
+        entry.supplierId === null
+          ? ""
+          : String(entry.supplierId),
     });
     setFormError("");
     setIsModalOpen(true);
@@ -284,6 +306,10 @@ export function BarMenuManager({
             ? Number(
                 form.minimumStockQuantity
               )
+            : null,
+        supplierId:
+          form.type === "ITEM" && form.supplierId
+            ? Number(form.supplierId)
             : null,
       });
 
@@ -498,6 +524,23 @@ export function BarMenuManager({
               )
             }
           />
+
+          {form.type === "ITEM" ? (
+            <DropdownSelect
+              label="Fornecedor"
+              value={form.supplierId}
+              placeholder="Sem fornecedor"
+              options={[
+                { value: "", label: "Sem fornecedor" },
+                ...suppliers.map((supplier) => ({
+                  value: String(supplier.id),
+                  label: supplier.name,
+                })),
+              ]}
+              onChange={(value) => updateForm("supplierId", value)}
+              constrainToModal
+            />
+          ) : null}
 
           {form.type === "ITEM" ? (
             <AdminToggle

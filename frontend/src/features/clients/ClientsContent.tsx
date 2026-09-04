@@ -15,6 +15,7 @@ import {
 import type {
   Client,
   ClientInput,
+  ClientConsumptionHistoryEntry,
 } from "../../entities/client";
 
 import {
@@ -137,6 +138,23 @@ function ClientsContentView() {
     }
   }
 
+
+  async function loadConsumptionHistory(
+    clientId: number
+  ): Promise<ClientConsumptionHistoryEntry[]> {
+    try {
+      return await repositories.clients.consumptionHistory(clientId);
+    } catch (error) {
+      showToast({
+        title: error instanceof Error
+          ? error.message
+          : "Não foi possível carregar o histórico do cliente.",
+        variant: "error",
+      });
+      return [];
+    }
+  }
+
   return (
     <ContentStack>
       {loading ? (
@@ -150,6 +168,7 @@ function ClientsContentView() {
           onUpdate={update}
           onSetActive={setActive}
           onRemove={remove}
+          onLoadConsumptionHistory={loadConsumptionHistory}
         />
       )}
     </ContentStack>

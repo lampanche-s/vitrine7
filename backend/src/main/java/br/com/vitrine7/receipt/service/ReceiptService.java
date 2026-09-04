@@ -39,21 +39,19 @@ public class ReceiptService {
         authorizationVerifier.verify(checkout.operationType(), principal);
         validateCheckoutReady(checkout);
 
-        if (repository.countReceiptPayments(checkoutId) != 1L) {
+        List<ReceiptPaymentResponse> payments = repository.findReceiptPayments(checkoutId)
+                .stream()
+                .map(this::localizePayment)
+                .toList();
+
+        if (payments.isEmpty()) {
             throw new BusinessException(
                     "RECEIPT_APPROVED_PAYMENT_REQUIRED",
-                    "O recibo exige exatamente um pagamento concluido."
+                    "O recibo exige pelo menos um pagamento concluído."
             );
         }
 
-        ReceiptPaymentResponse payment = repository.findReceiptPayment(checkoutId)
-                .map(this::localizePayment)
-                .orElseThrow(() -> new BusinessException(
-                        "RECEIPT_APPROVED_PAYMENT_REQUIRED",
-                        "O recibo exige um pagamento concluido."
-                ));
-
-        validatePayment(checkout, payment);
+        validatePayments(checkout, payments);
 
         if (!"BAR_COMMAND".equals(checkout.operationType())) {
             throw new BusinessException(
@@ -62,12 +60,12 @@ public class ReceiptService {
             );
         }
 
-        return tabReceipt(checkout, payment);
+        return tabReceipt(checkout, payments);
     }
 
     private ReceiptResponse tabReceipt(
             CheckoutReceiptRow checkout,
-            ReceiptPaymentResponse payment
+            List<ReceiptPaymentResponse> payments
     ) {
         TabReceiptRow tab = repository.findTab(checkout.id());
 
@@ -112,14 +110,20 @@ public class ReceiptService {
                         tab.name(),
                         tab.status(),
                         checkout.createdByUserId(),
-                        checkout.createdByUserName()
+                        checkout.createdByUserName(),
+                        tab.vehicleName(),
+                        tab.vehiclePlate()
                 ),
                 lines,
                 checkout.subtotalCents(),
                 checkout.discountCents(),
                 checkout.totalCents(),
-                payment,
-                payment.approvedAt()
+                payments,
+                payments.stream()
+                        .map(ReceiptPaymentResponse::approvedAt)
+                        .filter(java.util.Objects::nonNull)
+                        .max(java.time.OffsetDateTime::compareTo)
+                        .orElseThrow()
         );
     }
 
@@ -166,21 +170,40 @@ public class ReceiptService {
         }
     }
 
-    private void validatePayment(
+    private void validatePayments(
             CheckoutReceiptRow checkout,
-            ReceiptPaymentResponse payment
+            List<ReceiptPaymentResponse> payments
     ) {
-        if (payment.approvedAt() == null) {
-            throw new BusinessException(
-                    "RECEIPT_PAYMENT_APPROVAL_DATE_REQUIRED",
-                    "O pagamento aprovado nao possui data oficial."
+        long approvedTotal = 0L;
+        String status = null;
+
+        for (ReceiptPaymentResponse payment : payments) {
+            if (payment.approvedAt() == null) {
+                throw new BusinessException(
+                        "RECEIPT_PAYMENT_APPROVAL_DATE_REQUIRED",
+                        "Um pagamento aprovado não possui data oficial."
+                );
+            }
+
+            approvedTotal = Math.addExact(
+                    approvedTotal,
+                    payment.approvedAmountCents()
             );
+
+            if (status == null) {
+                status = payment.status();
+            } else if (!status.equals(payment.status())) {
+                throw new BusinessException(
+                        "RECEIPT_PAYMENT_STATUS_INCONSISTENT",
+                        "As partes do pagamento possuem estados incompatíveis."
+                );
+            }
         }
 
-        if (checkout.totalCents() != payment.approvedAmountCents()) {
+        if (checkout.totalCents() != approvedTotal) {
             throw new BusinessException(
                     "RECEIPT_FINANCIAL_INTEGRITY_ERROR",
-                    "O valor aprovado nao confere com o total do checkout."
+                    "A soma dos pagamentos não confere com o total do checkout."
             );
         }
     }

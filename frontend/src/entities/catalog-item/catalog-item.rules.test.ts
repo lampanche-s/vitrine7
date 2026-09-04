@@ -48,6 +48,28 @@ describe("catalog-item.rules", () => {
     });
   });
 
+  it("mantém fornecedor somente para item", () => {
+    expect(normalizeBarCatalogItemInput({
+      name: "Produto",
+      type: "ITEM",
+      price: 12,
+      stockEnabled: false,
+      stockQuantity: null,
+      minimumStockQuantity: null,
+      supplierId: 7,
+    }).supplierId).toBe(7);
+
+    expect(normalizeBarCatalogItemInput({
+      name: "Serviço",
+      type: "SERVICE",
+      price: 12,
+      stockEnabled: false,
+      stockQuantity: null,
+      minimumStockQuantity: null,
+      supplierId: 7,
+    }).supplierId).toBeNull();
+  });
+
   it("remove estoque quando o controle está desligado", () => {
     expect(
       normalizeBarCatalogItemInput({

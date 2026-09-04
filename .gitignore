@@ -9,6 +9,7 @@ frontend/coverage/
 
 # Release outputs
 release/
+.codex-run/
 *.zip
 
 # Local backups and applied patches
@@ -28,3 +29,7 @@ release/
 Thumbs.db
 # Printer agent local configuration
 printer-agent/printer-agent.properties
+
+# PagBank agent local configuration and state
+pagbank-agent/pagbank-agent.env
+pagbank-agent/.state/

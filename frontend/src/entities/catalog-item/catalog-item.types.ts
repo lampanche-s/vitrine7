@@ -10,9 +10,12 @@ export type BarCatalogItem = {
   stockEnabled: boolean;
   stockQuantity: number | null;
   minimumStockQuantity: number | null;
+  supplierId: number | null;
 };
 
 export type BarCatalogItemInput = Omit<
   BarCatalogItem,
-  "id"
->;
+  "id" | "supplierId"
+> & {
+  supplierId?: number | null;
+};

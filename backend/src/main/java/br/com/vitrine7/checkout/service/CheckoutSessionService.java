@@ -7,6 +7,7 @@ import br.com.vitrine7.checkout.dto.CreateCheckoutSessionRequest;
 import br.com.vitrine7.checkout.entity.CheckoutSessionEntity;
 import br.com.vitrine7.checkout.entity.CheckoutStatus;
 import br.com.vitrine7.checkout.repository.CheckoutSessionRepository;
+import br.com.vitrine7.payment.core.repository.PaymentRepository;
 import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.common.idempotency.IdempotencyFingerprintService;
@@ -32,6 +33,7 @@ public class CheckoutSessionService {
     private final IdempotencyFingerprintService fingerprintService;
     private final CheckoutProperties checkoutProperties;
     private final CheckoutResourceReleaseCoordinator releaseCoordinator;
+    private final PaymentRepository paymentRepository;
     private final Clock clock;
 
     public OpenCheckoutResult open(
@@ -110,9 +112,9 @@ public class CheckoutSessionService {
         CheckoutSessionEntity checkout =
                 getForUpdate(id);
 
-        checkout.expireIfNecessary(
-                OffsetDateTime.now(clock)
-        );
+        if (paymentRepository.countApprovedPayments(id) == 0) {
+            checkout.expireIfNecessary(OffsetDateTime.now(clock));
+        }
 
         return CheckoutSessionResponse.from(checkout);
     }
@@ -127,6 +129,13 @@ public class CheckoutSessionService {
                 getForUpdate(id);
 
         OffsetDateTime now = OffsetDateTime.now(clock);
+
+        if (paymentRepository.countApprovedPayments(id) > 0) {
+            throw new BusinessException(
+                    "CHECKOUT_APPROVED_PAYMENT_EXISTS",
+                    "Este checkout possui pagamento aprovado e não pode ser cancelado ou liberado."
+            );
+        }
 
         checkout.expireIfNecessary(now);
 

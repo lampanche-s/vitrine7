@@ -1,6 +1,8 @@
 export type {
   Client,
   ClientInput,
+  ClientConsumptionHistoryEntry,
+  ClientConsumptionHistoryLine,
 } from "./client.types";
 
 export {

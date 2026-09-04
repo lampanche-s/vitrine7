@@ -58,7 +58,7 @@ class SalesReportReadRepositoryTest {
         String sql =
                 (String) field.get(null);
 
-        assertTrue(
+        assertFalse(
                 sql.contains(
                         "'REVERSED'"
                 )
@@ -66,7 +66,7 @@ class SalesReportReadRepositoryTest {
 
         assertTrue(
                 sql.contains(
-                        "AND payment.status = 'APPROVED'"
+                        "WHERE payment.status = 'APPROVED'"
                 )
         );
 
@@ -75,5 +75,20 @@ class SalesReportReadRepositoryTest {
                         "'REVERSAL_" + "PENDING'"
                 )
         );
+    }
+
+    @Test
+    void reportsIncludeOnlyClosedFinalizedApprovedOperations()
+            throws Exception {
+        Field field = SalesReportReadRepository.class
+                .getDeclaredField("OPERATION_CTE");
+
+        field.setAccessible(true);
+
+        String sql = (String) field.get(null);
+
+        assertTrue(sql.contains("WHERE tab.status = 'CLOSED'"));
+        assertTrue(sql.contains("checkout.status = 'FINALIZED'"));
+        assertTrue(sql.contains("WHERE payment.status = 'APPROVED'"));
     }
 }

@@ -17,6 +17,7 @@ import type {
   BarCommandStatus,
   CloseBarCommandInput,
   OpenBarCommandInput,
+  VoucherBarCommandInput,
 } from "../../../entities/command";
 
 import type {
@@ -183,6 +184,22 @@ export function BarDomainProvider({
     );
   }
 
+  function reopenCommand(
+    commandId: number
+  ): Promise<BarCommand | null> {
+    return executeMutation(
+      async () => {
+        const command = await repository.reopenCommand(commandId);
+        dispatch({
+          type: "command/created",
+          payload: command,
+        });
+        return command;
+      },
+      null
+    );
+  }
+
   function setCommandStatus(
     commandId: number,
     status: BarCommandStatus
@@ -199,6 +216,51 @@ export function BarDomainProvider({
           type: "command/updated",
           payload: command,
         });
+        return true;
+      },
+      false
+    );
+  }
+
+  function printPrePaymentNote(
+    commandId: number
+  ): Promise<boolean> {
+    return executeMutation(
+      async () => {
+        await repository.printPrePaymentNote(commandId);
+        return true;
+      },
+      false
+    );
+  }
+
+  function printItems(tabId: number): Promise<boolean> {
+    return executeMutation(
+      async () => {
+        await repository.printItems(tabId);
+        return true;
+      },
+      false
+    );
+  }
+
+  function printServices(tabId: number): Promise<boolean> {
+    return executeMutation(
+      async () => {
+        await repository.printServices(tabId);
+        return true;
+      },
+      false
+    );
+  }
+
+  function printLine(
+    tabId: number,
+    lineId: number
+  ): Promise<boolean> {
+    return executeMutation(
+      async () => {
+        await repository.printLine(tabId, lineId);
         return true;
       },
       false
@@ -313,6 +375,16 @@ export function BarDomainProvider({
     );
   }
 
+  function closeVoucher(input: VoucherBarCommandInput): Promise<BarCommand | null> {
+    return executeMutation(async () => {
+      const command = await repository.closeVoucher(input);
+      dispatch({ type: "command/removed", payload: command.id });
+      const snapshot = await repository.getSnapshot();
+      dispatch({ type: "repository/snapshot-loaded", payload: snapshot });
+      return command;
+    }, null);
+  }
+
   function createCatalogEntry(
     input: BarCatalogItemInput
   ): Promise<BarCatalogItem | null> {
@@ -381,12 +453,18 @@ export function BarDomainProvider({
         clearError,
         listHistory,
         openCommand,
+        reopenCommand,
         setCommandStatus,
+        printPrePaymentNote,
+        printItems,
+        printServices,
+        printLine,
         addCommandItem,
         updateCommandItemQuantity,
         removeCommandItem,
         cancelCommand,
         closeCommand,
+        closeVoucher,
         createCatalogEntry,
         updateCatalogEntry,
         removeCatalogEntry,

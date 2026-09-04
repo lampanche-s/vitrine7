@@ -8,6 +8,7 @@ export function TextField({
   min,
   max,
   step,
+  autoFocus = false,
   className = "",
 }: {
   label?: string;
@@ -25,6 +26,7 @@ export function TextField({
   min?: number;
   max?: number;
   step?: number;
+  autoFocus?: boolean;
   className?: string;
 }) {
   return (
@@ -42,6 +44,7 @@ export function TextField({
         min={min}
         max={max}
         step={step}
+        autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         className={[

@@ -74,12 +74,18 @@ function BarContentView({
     listHistory,
 
     openCommand,
+    reopenCommand,
     setCommandStatus,
+    printPrePaymentNote,
+    printItems,
+    printServices,
+    printLine,
     addCommandItem,
     updateCommandItemQuantity,
     removeCommandItem,
     cancelCommand,
     closeCommand,
+    closeVoucher,
 
     createCatalogEntry,
     updateCatalogEntry,
@@ -99,6 +105,10 @@ function BarContentView({
           catalogEntries={catalogEntries}
           onOpenCommand={openCommand}
           onSetCommandStatus={setCommandStatus}
+          onPrintPrePaymentNote={printPrePaymentNote}
+          onPrintItems={printItems}
+          onPrintServices={printServices}
+          onPrintLine={printLine}
           onAddCommandItem={addCommandItem}
           onUpdateCommandItemQuantity={
             updateCommandItemQuantity
@@ -112,6 +122,7 @@ function BarContentView({
           onCloseCommand={
             closeCommand
           }
+          onCloseVoucher={closeVoucher}
         />
       </ContentStack>
     );
@@ -135,6 +146,7 @@ function BarContentView({
       <ContentStack>
         <BarSalesHistory
           onLoadHistory={listHistory}
+          onReopenCommand={reopenCommand}
         />
       </ContentStack>
     );

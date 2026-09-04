@@ -24,6 +24,7 @@ public record BarHistoryResponse(
         Integer totalUnits,
         OffsetDateTime createdAt,
         OffsetDateTime finishedAt,
+        OffsetDateTime reopenUntil,
         Long createdByUserId,
         String detailPath
 ) {

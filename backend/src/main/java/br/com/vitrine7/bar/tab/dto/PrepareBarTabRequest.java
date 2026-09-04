@@ -17,6 +17,12 @@ public record PrepareBarTabRequest(
         @NotNull(message = "Informe o desconto.")
         @Min(value = 0)
         @Max(value = 99_999_999)
-        Long discountCents
+        Long discountCents,
+
+        @Size(max = 120)
+        String vehicleName,
+
+        @Size(max = 20)
+        String vehiclePlate
 ) {
 }

@@ -6,7 +6,8 @@ export type BarPaymentMethod =
   | "Dinheiro";
 
 export type BarHistoricalPaymentMethod =
-  BarPaymentMethod;
+  | BarPaymentMethod
+  | "Múltiplas";
 
 export type BarReceiptDocument =
   "Recibo geral";
@@ -34,4 +35,5 @@ export type BarSaleHistoryEntry = {
   status?: string;
   time: string;
   completedAt?: string;
+  reopenUntil?: string | null;
 };

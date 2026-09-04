@@ -1,6 +1,7 @@
 import type {
   Client,
   ClientInput,
+  ClientConsumptionHistoryEntry,
 } from "../../entities/client";
 
 import type {
@@ -28,6 +29,39 @@ type ClientResponse = {
   plate: string;
   active: boolean;
 };
+
+
+type ClientConsumptionHistoryResponse = {
+  operationId: number;
+  completedAt: string;
+  totalCents: number;
+  paymentStatus: string;
+  lines: {
+    entryType: "ITEM" | "SERVICE";
+    itemName: string;
+    quantity: number;
+    unitPriceCents: number;
+    lineTotalCents: number;
+  }[];
+};
+
+function mapConsumptionHistory(
+  entry: ClientConsumptionHistoryResponse
+): ClientConsumptionHistoryEntry {
+  return {
+    operationId: entry.operationId,
+    completedAt: entry.completedAt,
+    total: entry.totalCents / 100,
+    paymentStatus: entry.paymentStatus,
+    lines: entry.lines.map((line) => ({
+      entryType: line.entryType,
+      itemName: line.itemName,
+      quantity: line.quantity,
+      unitPrice: line.unitPriceCents / 100,
+      total: line.lineTotalCents / 100,
+    })),
+  };
+}
 
 function mapClient(
   client: ClientResponse
@@ -61,6 +95,14 @@ export const httpClientsRepository: ClientsRepository = {
     );
 
     return clients.map(mapClient);
+  },
+
+  async consumptionHistory(clientId) {
+    const history = await httpClient.get<ClientConsumptionHistoryResponse[]>(
+      `/clients/${clientId}/consumption-history`
+    );
+
+    return history.map(mapConsumptionHistory);
   },
 
   async create(input) {

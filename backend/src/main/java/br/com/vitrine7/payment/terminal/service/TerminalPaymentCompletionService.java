@@ -6,6 +6,7 @@ import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentStatus;
 import br.com.vitrine7.payment.core.repository.PaymentRepository;
+import br.com.vitrine7.payment.core.service.CheckoutPaymentAllocationService;
 import br.com.vitrine7.payment.terminal.adapter.ProviderPaymentResult;
 import br.com.vitrine7.payment.terminal.entity.PaymentTerminalTransactionEntity;
 import br.com.vitrine7.payment.terminal.repository.PaymentTerminalTransactionRepository;
@@ -24,6 +25,7 @@ public class TerminalPaymentCompletionService {
 
     private final CheckoutSessionRepository checkoutRepository;
     private final PaymentRepository paymentRepository;
+    private final CheckoutPaymentAllocationService allocationService;
     private final PaymentTerminalTransactionRepository
             terminalTransactionRepository;
     private final Clock clock;
@@ -87,8 +89,11 @@ public class TerminalPaymentCompletionService {
                     adapterResult.metadata()
             );
 
-            checkout.markPaid(now);
-
+            paymentRepository.flush();
+            allocationService.applyApprovedPayment(
+                    checkout,
+                    now
+            );
 
         } else {
             payment.markDeclined(now);

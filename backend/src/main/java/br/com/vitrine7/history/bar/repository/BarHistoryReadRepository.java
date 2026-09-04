@@ -31,13 +31,7 @@ public class BarHistoryReadRepository {
                     tab.discount_cents,
                     tab.total_cents,
                     cs.document_type,
-                    CASE p.method
-                        WHEN 'CASH' THEN 'CASH'
-                        WHEN 'PIX' THEN 'PIX'
-                        WHEN 'CREDIT_CARD' THEN 'CREDIT'
-                        WHEN 'DEBIT_CARD' THEN 'DEBIT'
-                        ELSE NULL
-                    END AS payment_method,
+                    p.payment_method,
                     p.status AS payment_status,
                     p.id AS payment_id,
                     p.reversed_at AS payment_reversed_at,
@@ -54,6 +48,10 @@ public class BarHistoryReadRepository {
                         tab.created_at
                     ) AS finished_at,
                     tab.created_by_user_id,
+                    CASE
+                        WHEN tab.closed_at IS NULL THEN NULL
+                        ELSE tab.closed_at + INTERVAL '1 hour'
+                    END AS reopen_until,
                     ('/api/v1/bar/tabs/' || tab.id) AS detail_path,
                     LOWER(
                         tab.name || ' ' || tab.id || ' ' ||
@@ -64,21 +62,27 @@ public class BarHistoryReadRepository {
                     ON cs.id = tab.checkout_session_id
                 LEFT JOIN LATERAL (
                     SELECT
-                        pay.id,
-                        pay.method,
-                        pay.status,
-                        pay.reversed_at,
-                        pay.reversal_reason,
-                        pay.cash_received_cents,
-                        pay.cash_change_cents
+                        (ARRAY_AGG(pay.id ORDER BY pay.created_at ASC))[1] AS id,
+                        CASE
+                            WHEN COUNT(*) > 1 THEN 'MULTIPLE'
+                            ELSE CASE MIN(pay.method)
+                                WHEN 'CASH' THEN 'CASH'
+                                WHEN 'PIX' THEN 'PIX'
+                                WHEN 'CREDIT_CARD' THEN 'CREDIT'
+                                WHEN 'DEBIT_CARD' THEN 'DEBIT'
+                            END
+                        END AS payment_method,
+                        CASE
+                            WHEN BOOL_AND(pay.status = 'REVERSED') THEN 'REVERSED'
+                            ELSE 'APPROVED'
+                        END AS status,
+                        MAX(pay.reversed_at) AS reversed_at,
+                        MAX(pay.reversal_reason) AS reversal_reason,
+                        SUM(COALESCE(pay.cash_received_cents, 0))::bigint AS cash_received_cents,
+                        SUM(COALESCE(pay.cash_change_cents, 0))::bigint AS cash_change_cents
                     FROM payments pay
                     WHERE pay.checkout_session_id = cs.id
-                      AND pay.status IN (
-                          'APPROVED',
-                          'REVERSED'
-                      )
-                    ORDER BY pay.approved_at DESC, pay.created_at DESC
-                    LIMIT 1
+                      AND pay.status IN ('APPROVED', 'REVERSED')
                 ) p ON TRUE
                 LEFT JOIN LATERAL (
                     SELECT
@@ -202,6 +206,7 @@ public class BarHistoryReadRepository {
                     rs.getInt("total_units"),
                     rs.getObject("created_at", OffsetDateTime.class),
                     rs.getObject("finished_at", OffsetDateTime.class),
+                    rs.getObject("reopen_until", OffsetDateTime.class),
                     rs.getLong("created_by_user_id"),
                     rs.getString("detail_path")
             );

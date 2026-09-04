@@ -11,6 +11,8 @@ import br.com.vitrine7.common.exception.BusinessException;
 import br.com.vitrine7.common.exception.InvalidRequestException;
 import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.common.pagination.PageResponse;
+import br.com.vitrine7.supplier.entity.SupplierEntity;
+import br.com.vitrine7.supplier.service.SupplierAvailabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -51,6 +53,7 @@ public class CatalogEntryService {
 
     private final CatalogEntryRepository repository;
     private final CatalogEntryTextNormalizer textNormalizer;
+    private final SupplierAvailabilityService supplierAvailabilityService;
 
     @Transactional(readOnly = true)
     public PageResponse<CatalogEntryResponse> list(
@@ -118,6 +121,7 @@ public class CatalogEntryService {
                 request.stockQuantity(),
                 request.minimumStockQuantity()
         );
+        SupplierEntity supplier = resolveSupplier(request.type(), request.supplierId());
 
         CatalogEntryEntity entry =
                 CatalogEntryEntity.create(
@@ -127,7 +131,8 @@ public class CatalogEntryService {
                         request.priceCents(),
                         stock.enabled(),
                         stock.stockQuantity(),
-                        stock.minimumStockQuantity()
+                        stock.minimumStockQuantity(),
+                        supplier
                 );
 
         try {
@@ -163,6 +168,7 @@ public class CatalogEntryService {
                 request.stockQuantity(),
                 request.minimumStockQuantity()
         );
+        SupplierEntity supplier = resolveSupplier(request.type(), request.supplierId());
 
         entry.update(
                 request.type(),
@@ -171,7 +177,8 @@ public class CatalogEntryService {
                 request.priceCents(),
                 stock.enabled(),
                 stock.stockQuantity(),
-                stock.minimumStockQuantity()
+                stock.minimumStockQuantity(),
+                supplier
         );
 
         try {
@@ -267,6 +274,19 @@ public class CatalogEntryService {
                 stockQuantity,
                 minimumStockQuantity
         );
+    }
+
+    private SupplierEntity resolveSupplier(CatalogEntryType type, Long supplierId) {
+        if (type == CatalogEntryType.SERVICE) {
+            if (supplierId != null) {
+                throw new InvalidRequestException(
+                        "CATALOG_SERVICE_SUPPLIER_NOT_ALLOWED",
+                        "Serviços não podem possuir fornecedor."
+                );
+            }
+            return null;
+        }
+        return supplierId == null ? null : supplierAvailabilityService.lockAvailable(supplierId);
     }
 
     private record StockConfiguration(

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -239,6 +240,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN,
                 "ACCESS_DENIED",
                 "Você não tem permissão para executar esta ação.",
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "REPORT_ACCESS_DENIED",
+                "Senha de acesso aos relatórios inválida.",
                 request.getRequestURI(),
                 List.of()
         );

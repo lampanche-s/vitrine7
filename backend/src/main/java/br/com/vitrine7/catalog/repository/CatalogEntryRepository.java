@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
@@ -31,6 +32,30 @@ public interface CatalogEntryRepository extends
     List<CatalogEntryEntity> findAllAvailableByIdForUpdate(
             @Param("ids") Collection<Long> ids
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT entry
+            FROM CatalogEntryEntity entry
+            WHERE entry.id IN :ids
+            ORDER BY entry.id
+            """)
+    List<CatalogEntryEntity> findAllByIdForUpdate(
+            @Param("ids") Collection<Long> ids
+    );
+
+    List<CatalogEntryEntity> findAllBySupplierIdAndEntryTypeAndDeletedAtIsNullOrderByNameAsc(
+            Long supplierId,
+            CatalogEntryType entryType
+    );
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            UPDATE CatalogEntryEntity entry
+            SET entry.supplier = NULL
+            WHERE entry.supplier.id = :supplierId
+            """)
+    int clearSupplierBySupplierId(@Param("supplierId") Long supplierId);
 
     Optional<CatalogEntryEntity>
     findByEntryTypeAndNormalizedNameAndDeletedAtIsNull(

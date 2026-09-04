@@ -8,11 +8,71 @@ import type {
   BarCommand,
 } from "../../../entities/command";
 
+import type {
+  BarCatalogItem,
+} from "../../../entities/catalog-item";
+
 import {
   closeBarCommand,
+  shouldRequestVehicleDetails,
 } from "./close-command.rules";
 
+const service: BarCatalogItem = {
+  id: 1,
+  name: "Lavagem",
+  type: "SERVICE",
+  price: 30,
+  stockEnabled: false,
+  stockQuantity: null,
+  minimumStockQuantity: null,
+  supplierId: null,
+};
+
+const item: BarCatalogItem = {
+  ...service,
+  id: 2,
+  name: "Refrigerante",
+  type: "ITEM",
+};
+
+function commandWith(
+  clientId: number | null,
+  catalogItemId: number
+): BarCommand {
+  return {
+    id: 1,
+    name: "Comanda 1",
+    clientId,
+    status: "open",
+    openedAt: "12:00",
+    items: [{
+      key: "1",
+      catalogItemId,
+      name: "Produto",
+      unitPrice: 10,
+      quantity: 1,
+    }],
+  };
+}
+
 describe("closeBarCommand", () => {
+  it.each<[string, number | null, number, boolean]>([
+    ["avulsa com SERVICE", null, 1, true],
+    ["avulsa somente com ITEM", null, 2, false],
+    ["cliente cadastrado com SERVICE", 10, 1, false],
+    ["cliente cadastrado somente com ITEM", 10, 2, false],
+  ])(
+    "solicita veículo apenas para comanda %s",
+    (_description, clientId, catalogItemId, expected) => {
+      expect(
+        shouldRequestVehicleDetails(
+          commandWith(clientId, catalogItemId),
+          [service, item]
+        )
+      ).toBe(expected);
+    }
+  );
+
   it("preserva itens nominais com quantidade e valores para o recibo", () => {
     const command: BarCommand = {
       id: 7,

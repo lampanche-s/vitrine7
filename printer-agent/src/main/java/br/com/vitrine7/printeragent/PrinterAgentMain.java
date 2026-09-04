@@ -24,9 +24,15 @@ public final class PrinterAgentMain {
             log("Backend: " + config.backendUrl());
             log("Impressora: " + config.printerName());
 
+            boolean backendValidated = false;
+
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     var delivery = client.next();
+                    if (!backendValidated) {
+                        log("Comunicacao com o backend validada.");
+                        backendValidated = true;
+                    }
                     if (delivery.isEmpty()) {
                         continue;
                     }

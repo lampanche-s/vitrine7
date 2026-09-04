@@ -2,9 +2,11 @@ package br.com.vitrine7.client.controller;
 
 import br.com.vitrine7.client.dto.ChangeClientStatusRequest;
 import br.com.vitrine7.client.dto.ClientResponse;
+import br.com.vitrine7.client.dto.ClientConsumptionHistoryResponse;
 import br.com.vitrine7.client.dto.CreateClientRequest;
 import br.com.vitrine7.client.dto.UpdateClientRequest;
 import br.com.vitrine7.client.service.ClientService;
+import br.com.vitrine7.client.service.ClientConsumptionHistoryService;
 import br.com.vitrine7.common.pagination.PageResponse;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import jakarta.validation.Valid;
@@ -27,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/clients")
 @Validated
@@ -34,9 +38,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClientController {
 
     private final ClientService clientService;
+    private final ClientConsumptionHistoryService consumptionHistoryService;
 
-    public ClientController(ClientService clientService) {
+    public ClientController(
+            ClientService clientService,
+            ClientConsumptionHistoryService consumptionHistoryService
+    ) {
         this.clientService = clientService;
+        this.consumptionHistoryService = consumptionHistoryService;
     }
 
     @GetMapping
@@ -54,6 +63,13 @@ public class ClientController {
     @GetMapping("/{id}")
     public ClientResponse findById(@PathVariable Long id) {
         return clientService.findById(id);
+    }
+
+    @GetMapping("/{id}/consumption-history")
+    public List<ClientConsumptionHistoryResponse> consumptionHistory(
+            @PathVariable Long id
+    ) {
+        return consumptionHistoryService.list(id);
     }
 
     @PostMapping
