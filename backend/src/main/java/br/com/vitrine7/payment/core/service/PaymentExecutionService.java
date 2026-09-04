@@ -8,7 +8,6 @@ import br.com.vitrine7.common.exception.NotFoundException;
 import br.com.vitrine7.payment.core.config.PaymentProperties;
 import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentProcessingMode;
-import br.com.vitrine7.payment.core.entity.PaymentStatus;
 import br.com.vitrine7.payment.core.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

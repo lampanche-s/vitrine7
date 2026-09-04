@@ -22,7 +22,6 @@ import tools.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -493,7 +492,7 @@ public class TerminalCommandQueueService {
             if (count > 12 || !METADATA_WHITELIST.contains(field.getKey())
                     || field.getValue().isObject() || field.getValue().isArray())
                 throw invalid("Metadata contem campo nao permitido.");
-            validateSafe(field.getValue().asText());
+            validateSafe(field.getValue().asString());
         }
         ObjectNode out = mapper.createObjectNode();
         out.put("status", request.status().name());
@@ -507,7 +506,7 @@ public class TerminalCommandQueueService {
     }
 
     private ProviderPaymentResult toProviderResult(JsonNode result) {
-        return new ProviderPaymentResult(ProviderPaymentStatus.valueOf(result.path("status").asText()),
+        return new ProviderPaymentResult(ProviderPaymentStatus.valueOf(result.path("status").asString()),
                 text(result, "providerReference"), text(result, "providerRequestId"), text(result, "failureCode"),
                 text(result, "failureMessage"), metadataMap(result.path("metadata")), now());
     }
@@ -519,7 +518,7 @@ public class TerminalCommandQueueService {
                 JsonNode value = e.getValue();
                 if (value.isBoolean()) result.put(e.getKey(), value.asBoolean());
                 else if (value.isNumber()) result.put(e.getKey(), value.asLong());
-                else result.put(e.getKey(), safe(value.asText(), 120));
+                else result.put(e.getKey(), safe(value.asString(), 120));
             }
         });
         return Map.copyOf(result);
@@ -534,7 +533,7 @@ public class TerminalCommandQueueService {
     private void validateSafe(String value) { if (value != null && CARD_NUMBER.matcher(value).find()) throw invalid("Resultado contem dado sensivel."); }
     private String safe(String value, int limit) { if (value == null || value.isBlank()) return null; String v=value.trim().replaceAll("[\\r\\n\\t]+", " "); return v.length()<=limit?v:v.substring(0,limit); }
     private void put(ObjectNode node, String key, String value) { String safe=safe(value, key.equals("failureMessage")?255:120); if(safe==null) node.putNull(key); else node.put(key,safe); }
-    private String text(JsonNode node, String key) { JsonNode v=node.get(key); return v==null||v.isNull()?null:v.asText(); }
+    private String text(JsonNode node, String key) { JsonNode v=node.get(key); return v==null||v.isNull()?null:v.asString(); }
     private BusinessException invalid(String message) { return new BusinessException("PAYMENT_TERMINAL_RESULT_INVALID", message); }
     private static UUID reconciliationCommandId(
             UUID transactionId

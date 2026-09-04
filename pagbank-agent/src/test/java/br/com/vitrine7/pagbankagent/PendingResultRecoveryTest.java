@@ -125,7 +125,7 @@ class PendingResultRecoveryTest {
             );
         };
 
-        PagBankAgentRunner runner =
+        try (PagBankAgentRunner runner =
                 new PagBankAgentRunner(
                         config,
                         tokenStore,
@@ -143,26 +143,27 @@ class PendingResultRecoveryTest {
                                 "SIMULATED"
                         ),
                         mapper
-                );
+                )) {
 
-        runner.pairIfNeeded();
+            runner.pairIfNeeded();
 
-        assertThrows(
-                IOException.class,
-                runner::pollAndProcessOnce
-        );
+            assertThrows(
+                    IOException.class,
+                    runner::pollAndProcessOnce
+            );
 
-        assertTrue(Files.exists(pendingPath));
-        assertEquals(1, paymentExecutions.get());
-        assertEquals(1, bridgeClient.resultAttempts());
+            assertTrue(Files.exists(pendingPath));
+            assertEquals(1, paymentExecutions.get());
+            assertEquals(1, bridgeClient.resultAttempts());
 
-        Optional<BridgeDtos.ResultResponse> recovered =
-                runner.pollAndProcessOnce();
+            Optional<BridgeDtos.ResultResponse> recovered =
+                    runner.pollAndProcessOnce();
 
-        assertTrue(recovered.isPresent());
-        assertFalse(Files.exists(pendingPath));
-        assertEquals(1, paymentExecutions.get());
-        assertEquals(2, bridgeClient.resultAttempts());
+            assertTrue(recovered.isPresent());
+            assertFalse(Files.exists(pendingPath));
+            assertEquals(1, paymentExecutions.get());
+            assertEquals(2, bridgeClient.resultAttempts());
+        }
     }
 
     private static final class RecordingBridgeClient

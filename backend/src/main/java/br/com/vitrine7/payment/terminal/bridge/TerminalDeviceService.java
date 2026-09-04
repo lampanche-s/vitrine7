@@ -60,7 +60,7 @@ public class TerminalDeviceService {
 
     @Transactional
     public TerminalDeviceDtos.PairingCodeResponse createPairingCode(UUID deviceId, Long actorId) {
-        TerminalDeviceDtos.Response device = require(deviceId);
+        require(deviceId);
         OffsetDateTime now = now();
         repository.invalidatePairingCodes(deviceId, now);
         String code = randomText(12);
@@ -104,7 +104,7 @@ public class TerminalDeviceService {
     }
 
     public void revoke(UUID id, Long actorId) {
-        TerminalDeviceDtos.Response device = require(id);
+        require(id);
         List<UUID> pendingTransactions = jdbc.queryForList("""
                 SELECT terminal_transaction_id FROM payment_terminal_commands
                 WHERE device_id=? AND status IN ('QUEUED','DELIVERED','ACKNOWLEDGED')

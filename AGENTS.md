@@ -19,8 +19,9 @@ alias de shell: é uma instrução permanente para o Codex neste workspace.
   pid,ppid,user,lstart,args --sort=pid`; confirme pelo comando e pelo diretório
   de trabalho que ele pertence a este checkout. Envie primeiro `SIGTERM`,
   aguarde e confira novamente. Nunca mate um processo só porque ocupa `8080` ou
-  `5173`, nunca pare PostgreSQL ao finalizar e não toque em processos de outros
-  projetos.
+  `5173` e não toque em processos de outros projetos. No fluxo `loc`, encerre o
+  PostgreSQL ao final somente se o próprio fluxo o tiver iniciado; se o serviço
+  já estava ativo antes da execução, preserve-o.
 - Preserve e inclua alterações já existentes no fluxo Git solicitado por
   `loc`/`prod`. Não descarte, reverta ou sobrescreva trabalho preexistente.
 - Correções pequenas, previsíveis, reversíveis e claramente dentro do escopo
@@ -167,7 +168,9 @@ Execute nesta ordem, mantendo logs temporários fora dos arquivos versionados:
    conflito não trivial ou rejeição de push é problema sério.
 9. Em bloco de limpeza garantido mesmo após falha, envie `SIGTERM` somente aos
    PIDs deste checkout iniciados/identificados pela execução e confirme que
-   ficaram encerrados. Mantenha PostgreSQL e processos alheios rodando.
+   ficaram encerrados. Encerre PostgreSQL somente se ele tiver sido iniciado
+   pelo próprio fluxo `loc`; se já estava ativo antes da execução, preserve o
+   serviço. Mantenha processos alheios rodando.
 10. Entregue resumo curto: validações, migrations, commit/pull/push, correções,
     serviços encerrados e qualquer bloqueio.
 

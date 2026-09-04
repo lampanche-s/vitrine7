@@ -26,7 +26,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -488,7 +487,7 @@ class TerminalCommandQueueServiceTest {
                 payloadCaptor
                         .getValue()
                         .path("userReference")
-                        .asText()
+                        .asString()
         );
 
         assertEquals(

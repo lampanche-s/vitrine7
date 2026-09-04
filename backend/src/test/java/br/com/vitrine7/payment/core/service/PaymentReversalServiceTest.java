@@ -5,7 +5,6 @@ import br.com.vitrine7.payment.core.dto.PaymentResponse;
 import br.com.vitrine7.payment.core.entity.PaymentEntity;
 import br.com.vitrine7.payment.core.entity.PaymentMethod;
 import br.com.vitrine7.payment.core.entity.PaymentProcessingMode;
-import br.com.vitrine7.payment.core.entity.PaymentStatus;
 import br.com.vitrine7.payment.core.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

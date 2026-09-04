@@ -112,7 +112,7 @@ public class SimulatedPaymentTerminalAdapter
                 .has("simulatedOutcome")) {
             outcome = configuration.publicConfiguration()
                     .get("simulatedOutcome")
-                    .asText();
+                    .asString();
         }
 
         try {
@@ -129,7 +129,7 @@ public class SimulatedPaymentTerminalAdapter
         String transport = "IN_PROCESS";
         if (configuration.publicConfiguration() != null
                 && configuration.publicConfiguration().has("transport")) {
-            transport = configuration.publicConfiguration().get("transport").asText();
+            transport = configuration.publicConfiguration().get("transport").asString();
         }
         if (!transport.equals("IN_PROCESS") && !transport.equals("DEVICE_BRIDGE")) {
             throw new BusinessException("PAYMENT_PROVIDER_CONFIGURATION_INVALID",
