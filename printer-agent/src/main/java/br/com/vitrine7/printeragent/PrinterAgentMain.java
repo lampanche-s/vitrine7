@@ -1,6 +1,7 @@
 package br.com.vitrine7.printeragent;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -25,9 +26,16 @@ public final class PrinterAgentMain {
             log("Impressora: " + config.printerName());
 
             boolean backendValidated = false;
+            Instant nextHeartbeatAt = Instant.EPOCH;
 
             while (!Thread.currentThread().isInterrupted()) {
                 try {
+                    if (!Instant.now().isBefore(nextHeartbeatAt)) {
+                        client.heartbeat();
+                        nextHeartbeatAt = Instant.now().plusSeconds(
+                                config.heartbeatSeconds()
+                        );
+                    }
                     var delivery = client.next();
                     if (!backendValidated) {
                         log("Comunicacao com o backend validada.");

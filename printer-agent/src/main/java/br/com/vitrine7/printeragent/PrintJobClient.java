@@ -15,6 +15,8 @@ public final class PrintJobClient {
     private static final String TOKEN_HEADER = "X-Printer-Agent-Token";
     private static final String JOB_ID_HEADER = "X-Print-Job-Id";
     private static final String ATTEMPT_HEADER = "X-Print-Attempt";
+    private static final String IDENTITY_HEADER = "X-Printer-Agent-Identity";
+    private static final String VERSION_HEADER = "X-Printer-Agent-Version";
 
     private final AgentConfig config;
     private final HttpClient httpClient;
@@ -44,6 +46,8 @@ public final class PrintJobClient {
                 .timeout(config.requestTimeout())
                 .header("Accept", "text/plain")
                 .header(TOKEN_HEADER, config.agentToken())
+                .header(IDENTITY_HEADER, config.agentIdentity())
+                .header(VERSION_HEADER, config.agentVersion())
                 .GET()
                 .build();
 
@@ -76,6 +80,36 @@ public final class PrintJobClient {
         }
     }
 
+    public void heartbeat() throws IOException, InterruptedException {
+        String identity = URLEncoder.encode(
+                config.agentIdentity(),
+                StandardCharsets.UTF_8
+        );
+        String version = URLEncoder.encode(
+                config.agentVersion(),
+                StandardCharsets.UTF_8
+        );
+        HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        config.backendUrl()
+                                + "/api/v1/printer-agent/heartbeat?identity="
+                                + identity
+                                + "&agentVersion="
+                                + version
+                ))
+                .timeout(Duration.ofSeconds(15))
+                .header("Accept", "application/json")
+                .header(TOKEN_HEADER, config.agentToken())
+                .header(IDENTITY_HEADER, config.agentIdentity())
+                .header(VERSION_HEADER, config.agentVersion())
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+        );
+        ensureSuccess(response, "enviar heartbeat");
+    }
+
     public void report(UUID jobId, boolean success, String errorMessage)
             throws IOException, InterruptedException {
         String body = success || errorMessage == null ? "" : errorMessage;
@@ -97,6 +131,8 @@ public final class PrintJobClient {
                 .header("Accept", "application/json")
                 .header("Content-Type", "text/plain; charset=UTF-8")
                 .header(TOKEN_HEADER, config.agentToken())
+                .header(IDENTITY_HEADER, config.agentIdentity())
+                .header(VERSION_HEADER, config.agentVersion())
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 

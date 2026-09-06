@@ -26,12 +26,46 @@ APP_ESTABLISHMENT_ADDRESS=Rua Senhor do Bonfim, Monte Gordo, Camaçari/BA
 APP_BACKUP_PG_DUMP_PATH=/usr/bin/pg_dump
 APP_BACKUP_TIMEOUT=5m
 REPORT_PROTECTED_PASSWORD=CONFIGURAR_FORA_DO_REPOSITORIO
+APP_PRINTER_AGENT_TOKEN=CONFIGURAR_FORA_DO_REPOSITORIO
+APP_PRINTER_AGENT_OFFLINE_AFTER=90s
+APP_PAYMENT_TERMINAL_BRIDGE_OFFLINE_AFTER=90s
 ```
 
 Defina `REPORT_PROTECTED_PASSWORD` somente no arquivo protegido
 `/etc/vitrine7/application.env`; nunca registre o valor real neste documento,
 no Git, no frontend ou em logs. Mantenha também as variáveis de criptografia e
 do perfil de pagamento já usadas no ambiente atual.
+
+O exemplo `ops/application.env.production.example` contém somente nomes e
+placeholders. Nunca registre valores reais nesse arquivo.
+
+## Bootstrap do wrapper endurecido
+
+O código instalável está versionado em `ops/vitrine7-deploy`. A instalação em
+`/usr/local/sbin/vitrine7-deploy`, a criação de `/var/lib/vitrine7-deploy` e
+qualquer ajuste de sudoers formam uma etapa separada, revisada e explicitamente
+aprovada. A presença da fonte no Git não executa nem autoriza esse bootstrap.
+
+Dependências: Bash, `flock`, `realpath`, `find`, GNU `tar`, `sha256sum`,
+`unzip`, `psql`, `pg_dump`, `pg_restore`, `curl`, `ss`, `systemctl`, `timeout`,
+`openssl` e `awk`. O arquivo de ambiente, as raízes de release/backup e todos os
+componentes dos caminhos devem ser reais, nunca symlinks.
+
+Após o bootstrap, os comandos previstos são:
+
+```bash
+sudo -n /usr/local/sbin/vitrine7-deploy status
+sudo -n /usr/local/sbin/vitrine7-deploy preflight <release>
+sudo -n /usr/local/sbin/vitrine7-deploy deploy <release>
+sudo -n /usr/local/sbin/vitrine7-deploy agents-status --strict
+sudo -n /usr/local/sbin/vitrine7-deploy releases
+sudo -n /usr/local/sbin/vitrine7-deploy adopt-current-release <release>
+```
+
+`rollback-artifacts`, `rotate-report-credential` e
+`releases --prune --confirm=DELETE-OLD-RELEASES` são mutáveis e exigem aprovação
+operacional específica. A rotação não imprime a nova credencial e restaura o
+arquivo anterior se o backend ou a autenticação operacional falharem.
 
 ## Gerar artefatos no Windows
 
@@ -62,7 +96,9 @@ ssh vitrine7-prod 'sudo -n /usr/local/sbin/vitrine7-deploy deploy <release>'
 
 O wrapper valida os artefatos, verifica o serviço e as portas protegidas, cria
 backup completo do banco/backend/frontend em `/opt/vitrine7/backups`, registra
-Flyway antes/depois e só conclui ao emitir `DEPLOY_OK`.
+manifesto e hashes, registra Flyway antes/depois e só conclui ao emitir
+`DEPLOY_OK`. O ledger protegido fica em
+`/var/lib/vitrine7-deploy/deployments.jsonl` e não contém segredos.
 
 ## Validar
 
@@ -70,16 +106,25 @@ Flyway antes/depois e só conclui ao emitir `DEPLOY_OK`.
 ssh vitrine7-prod 'sudo -n /usr/local/sbin/vitrine7-deploy status'
 ```
 
+Depois da V53 e do bootstrap, `status` inclui o health agregado. Para validação
+bloqueante use `agents-status --strict`: Printer e PagBank devem estar
+`ONLINE`. `OFFLINE`, `NOT_CONFIGURED` e `REVOKED` não derrubam o health geral do
+backend.
+
 Depois valide no navegador: login, Cadastro, Clientes, Comandas, quatro pagamentos, marcação de estorno, Histórico, comprovante, relatórios e download do backup `.backup`.
 
 O backup baixado pela tela de Relatórios contém o banco completo, incluindo usuários e dados operacionais. Armazene-o fora da VPS e restrinja o acesso ao arquivo.
 
 ## Rollback
 
-O wrapper atual restaura automaticamente o JAR anterior quando o novo backend
+O wrapper restaura automaticamente o JAR anterior quando o novo backend
 não fica saudável e o Flyway não avançou; também restaura o frontend anterior
 quando sua validação falha. Se o Flyway avançar, ele interrompe sem executar
-rollback de banco. Não existe subcomando manual autorizado de rollback.
+rollback de banco.
+
+`rollback-artifacts <backup>` valida caminho real, ausência de symlinks,
+manifesto, dump e hashes; exige Flyway atual igual a `flyway-before.txt`; cria
+novo backup completo; e restaura somente JAR/frontend. Nunca restaura banco.
 
 Nunca restaure o banco ou altere `flyway_schema_history` manualmente. Rollback
 de banco exige necessidade comprovada e aprovação explícita.
@@ -93,6 +138,11 @@ APP_PRINTER_AGENT_TOKEN=<token-forte-compartilhado-com-o-agente>
 ```
 
 O agente Windows é distribuído separadamente em `vitrine7-printer-agent.zip` e usa o mesmo token em `printer-agent.properties`.
+
+A V53 persiste identidade, versão e heartbeat. As propriedades
+`agent.identity`, `agent.version` e `heartbeat.seconds` têm defaults
+compatíveis; versões antigas continuam aceitas, e o long polling registra uma
+identidade legada.
 
 No Linux, execute:
 
@@ -117,3 +167,10 @@ mvn clean verify
 ## V44 - Fechamento de caixa e nota pre-pagamento
 
 A V44 cria o registro simples de fechamento diario por usuario e separa os trabalhos de impressao entre comprovante final e nota de conferencia antes do pagamento. O mesmo Printer Agent continua sendo usado; nao ha novo processo local.
+
+## Retenção e adoção inicial
+
+`releases` apenas lista `ACTIVE`, `KEEP_LAST_3` e `CANDIDATE`. A exclusão é um
+modo separado e confirmado e nunca remove backups. Na primeira instalação, use
+`adopt-current-release <release>` somente se os hashes do JAR e de toda a árvore
+do frontend coincidirem com os artefatos ativos.

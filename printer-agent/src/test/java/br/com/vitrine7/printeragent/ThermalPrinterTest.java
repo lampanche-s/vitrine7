@@ -59,6 +59,9 @@ class ThermalPrinterTest {
         return new AgentConfig(
                 "https://example.test",
                 "test-token",
+                "caixa-principal",
+                "1.0.0",
+                30,
                 "Thermal 80",
                 20,
                 80d,

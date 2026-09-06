@@ -32,6 +32,7 @@ app:
   printer-agent:
     token: ${APP_PRINTER_AGENT_TOKEN:}
     long-poll-max: ${APP_PRINTER_AGENT_LONG_POLL_MAX:25s}
+    offline-after: ${APP_PRINTER_AGENT_OFFLINE_AFTER:90s}
   payment-terminal:
     bridge:
       command-timeout: ${APP_PAYMENT_TERMINAL_BRIDGE_COMMAND_TIMEOUT:120s}

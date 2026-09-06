@@ -3,8 +3,10 @@ package br.com.vitrine7.print.controller;
 import br.com.vitrine7.print.dto.PrintJobDtos;
 import br.com.vitrine7.print.security.PrinterAgentProperties;
 import br.com.vitrine7.print.service.PrintJobService;
+import br.com.vitrine7.print.service.PrinterAgentHealthService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,13 +37,16 @@ public class PrinterAgentController {
 
     private final PrintJobService service;
     private final PrinterAgentProperties properties;
+    private final PrinterAgentHealthService healthService;
 
     public PrinterAgentController(
             PrintJobService service,
-            PrinterAgentProperties properties
+            PrinterAgentProperties properties,
+            PrinterAgentHealthService healthService
     ) {
         this.service = service;
         this.properties = properties;
+        this.healthService = healthService;
     }
 
     @GetMapping(
@@ -48,8 +54,17 @@ public class PrinterAgentController {
             produces = "text/plain; charset=UTF-8"
     )
     public ResponseEntity<String> next(
-            @RequestParam(defaultValue = "20") @Min(0) @Max(25) int waitSeconds
+            @RequestParam(defaultValue = "20") @Min(0) @Max(25) int waitSeconds,
+            @RequestHeader(
+                    value = "X-Printer-Agent-Identity",
+                    required = false
+            ) @Size(max = 120) String identity,
+            @RequestHeader(
+                    value = "X-Printer-Agent-Version",
+                    required = false
+            ) @Size(max = 60) String agentVersion
     ) {
+        healthService.heartbeat(identity, agentVersion);
         Duration requested = Duration.ofSeconds(waitSeconds);
         Duration configured = properties.longPollMax() == null
                 ? Duration.ofSeconds(25)
@@ -89,6 +104,14 @@ public class PrinterAgentController {
         } while (true);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/heartbeat")
+    public PrinterAgentHealthService.Heartbeat heartbeat(
+            @RequestParam(required = false) @Size(max = 120) String identity,
+            @RequestParam(required = false) @Size(max = 60) String agentVersion
+    ) {
+        return healthService.heartbeat(identity, agentVersion);
     }
 
     @PostMapping(

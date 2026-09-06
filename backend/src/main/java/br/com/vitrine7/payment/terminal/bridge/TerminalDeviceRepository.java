@@ -173,6 +173,25 @@ public class TerminalDeviceRepository {
         return Boolean.TRUE.equals(available);
     }
 
+    public OperationalSnapshot pagBankOperationalSnapshot() {
+        return jdbc.queryForObject("""
+                SELECT count(*) AS total,
+                       count(*) FILTER (WHERE status = 'ACTIVE') AS active,
+                       count(*) FILTER (WHERE status = 'REVOKED') AS revoked,
+                       max(last_seen_at) FILTER (WHERE status = 'ACTIVE') AS last_seen_at,
+                       (array_agg(agent_version ORDER BY last_seen_at DESC NULLS LAST)
+                           FILTER (WHERE status = 'ACTIVE'))[1] AS agent_version
+                FROM payment_terminal_devices
+                WHERE provider_code = 'PAGBANK'
+                """, (rs, row) -> new OperationalSnapshot(
+                rs.getLong("total"),
+                rs.getLong("active"),
+                rs.getLong("revoked"),
+                rs.getObject("last_seen_at", OffsetDateTime.class),
+                rs.getString("agent_version")
+        ));
+    }
+
     public boolean revoke(UUID id, Long actorId, OffsetDateTime now) {
         return jdbc.update("""
                 UPDATE payment_terminal_devices
@@ -216,4 +235,11 @@ public class TerminalDeviceRepository {
     public record DevicePairingData(UUID pairingId, UUID deviceId, byte[] codeHash, OffsetDateTime expiresAt,
                                     OffsetDateTime usedAt, PaymentProviderCode providerCode, TerminalDeviceStatus status) {}
     public record DeviceSelection(UUID id, PaymentProviderCode providerCode) {}
+    public record OperationalSnapshot(
+            long total,
+            long active,
+            long revoked,
+            OffsetDateTime lastSeenAt,
+            String agentVersion
+    ) {}
 }

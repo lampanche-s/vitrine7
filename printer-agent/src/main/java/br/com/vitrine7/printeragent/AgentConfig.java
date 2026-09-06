@@ -11,6 +11,9 @@ import java.util.Properties;
 public record AgentConfig(
         String backendUrl,
         String agentToken,
+        String agentIdentity,
+        String agentVersion,
+        int heartbeatSeconds,
         String printerName,
         int waitSeconds,
         double paperWidthMm,
@@ -30,6 +33,10 @@ public record AgentConfig(
         String backendUrl = value(environment, "V7_PRINTER_BACKEND_URL", properties, "backend.url", "");
         String token = value(environment, "V7_PRINTER_AGENT_TOKEN", properties, "agent.token", "");
         String printerName = value(environment, "V7_PRINTER_NAME", properties, "printer.name", "");
+        String identity = value(environment, "V7_PRINTER_AGENT_IDENTITY", properties, "agent.identity", printerName);
+        String version = value(environment, "V7_PRINTER_AGENT_VERSION", properties, "agent.version", "1.0.0");
+        int heartbeatSeconds = integer(value(environment, "V7_PRINTER_HEARTBEAT_SECONDS", properties,
+                "heartbeat.seconds", "30"), 30, 5, 300);
         int waitSeconds = integer(value(environment, "V7_PRINTER_WAIT_SECONDS", properties, "poll.wait.seconds", "20"), 20, 0, 25);
         double width = decimal(value(environment, "V7_PRINTER_PAPER_WIDTH_MM", properties, "paper.width.mm", "80"), 80d, 40d, 120d);
         double margin = decimal(value(environment, "V7_PRINTER_MARGIN_MM", properties, "paper.margin.mm", "2"), 2d, 0d, 10d);
@@ -45,10 +52,20 @@ public record AgentConfig(
         if (printerName.isBlank()) {
             throw new IllegalStateException("printer.name nao foi configurado.");
         }
+        if (identity.isBlank()) {
+            throw new IllegalStateException("agent.identity nao foi configurado.");
+        }
+        if (identity.trim().length() > 120 || version.isBlank()
+                || version.trim().length() > 60) {
+            throw new IllegalStateException("Identidade ou versao do agente invalida.");
+        }
 
         return new AgentConfig(
                 stripTrailingSlash(backendUrl.trim()),
                 token.trim(),
+                identity.trim(),
+                version.trim(),
+                heartbeatSeconds,
                 printerName.trim(),
                 waitSeconds,
                 width,

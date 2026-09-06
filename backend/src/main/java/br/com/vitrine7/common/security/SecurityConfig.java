@@ -1,6 +1,7 @@
 package br.com.vitrine7.common.security;
 
 import br.com.vitrine7.payment.terminal.bridge.TerminalDeviceAuthenticationFilter;
+import br.com.vitrine7.operations.OperationsAuthenticationFilter;
 import br.com.vitrine7.print.security.PrinterAgentAuthenticationFilter;
 import br.com.vitrine7.print.security.PrinterAgentProperties;
 import br.com.vitrine7.system.user.security.VitrineUserDetailsService;
@@ -95,6 +96,16 @@ public class SecurityConfig {
             PrinterAgentAuthenticationFilter filter
     ) {
         FilterRegistrationBean<PrinterAgentAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<OperationsAuthenticationFilter> operationsFilterRegistration(
+            OperationsAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<OperationsAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
@@ -213,6 +224,7 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             TerminalDeviceAuthenticationFilter terminalDeviceAuthenticationFilter,
             PrinterAgentAuthenticationFilter printerAgentAuthenticationFilter,
+            OperationsAuthenticationFilter operationsAuthenticationFilter,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
@@ -302,6 +314,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         printerAgentAuthenticationFilter,
                         TerminalDeviceAuthenticationFilter.class
+                )
+                .addFilterBefore(
+                        operationsAuthenticationFilter,
+                        PrinterAgentAuthenticationFilter.class
                 );
 
         return http.build();

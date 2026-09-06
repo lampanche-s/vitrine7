@@ -21,6 +21,9 @@ class AgentConfigTest {
                 backend.url=https://example.test/
                 agent.token=file-token
                 printer.name=Thermal 80
+                agent.identity=caixa-principal
+                agent.version=1.0.0
+                heartbeat.seconds=45
                 poll.wait.seconds=18
                 """);
 
@@ -32,6 +35,9 @@ class AgentConfigTest {
         assertEquals("https://example.test", loaded.backendUrl());
         assertEquals("env-token", loaded.agentToken());
         assertEquals("Thermal 80", loaded.printerName());
+        assertEquals("caixa-principal", loaded.agentIdentity());
+        assertEquals("1.0.0", loaded.agentVersion());
+        assertEquals(45, loaded.heartbeatSeconds());
         assertEquals(18, loaded.waitSeconds());
         assertEquals(80d, loaded.paperWidthMm());
     }

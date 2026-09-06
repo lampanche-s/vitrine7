@@ -4,6 +4,11 @@ backend.url=https://vitrine7sys.duckdns.org
 # Mesmo segredo configurado no backend em APP_PRINTER_AGENT_TOKEN.
 agent.token=SUBSTITUA_POR_UM_TOKEN_FORTE
 
+# Identidade estavel desta estacao e versao enviada no heartbeat operacional.
+agent.identity=caixa-principal
+agent.version=1.0.0
+heartbeat.seconds=30
+
 # Nome exato exibido pelo Windows em Configuracoes > Impressoras.
 printer.name=SUBSTITUA_PELO_NOME_DA_IMPRESSORA
 

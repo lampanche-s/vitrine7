@@ -87,10 +87,15 @@ alias de shell: é uma instrução permanente para o Codex neste workspace.
   era `master`, com remoto privado `origin` e upstream `origin/master`; sempre
   verifique novamente e trate ausência ou divergência como bloqueio sério. Este
   checkout usa `core.whitespace=cr-at-eol` para aceitar os arquivos CRLF
-  preexistentes sem ocultar outros erros de whitespace. Varredura de segredos
-  disponível: `docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:latest
-  dir /repo --redact --no-banner` para o worktree e o mesmo comando com `git
-  /repo` no lugar de `dir /repo` para todo o histórico.
+  preexistentes sem ocultar outros erros de whitespace. A varredura bloqueante
+  de segredos usa `./scripts/scan-secrets.sh publishable` para a árvore que pode
+  ser versionada, `./scripts/scan-secrets.sh staged` para o índice exato e
+  `./scripts/scan-secrets.sh history` para todo o histórico. Segredo encontrado
+  em arquivo rastreado, staged, não ignorado/publicável ou no histórico bloqueia
+  commit e push. `./scripts/scan-secrets.sh workspace` é um diagnóstico opcional
+  do workspace completo: achado exclusivamente em arquivo local explicitamente
+  ignorado pelo Git gera aviso, não bloqueio. Todos os modos usam redação total;
+  nunca exiba o valor encontrado nem crie allowlist para segredo verdadeiro.
 
 ### Produção
 
@@ -117,15 +122,25 @@ alias de shell: é uma instrução permanente para o Codex neste workspace.
 - O wrapper de deploy cria backup versionado sob `/opt/vitrine7/backups` e
   informa Flyway antes/depois. `DEPLOY.md` contém um procedimento manual antigo;
   não o use enquanto o wrapper autorizado existir.
+- A fonte endurecida está em `ops/vitrine7-deploy`, mas seus novos subcomandos
+  só existem operacionalmente após bootstrap explícito na VPS. Até confirmar
+  instalação e sudoers reais, não chame `rollback-artifacts`, `releases`,
+  `adopt-current-release`, `rotate-report-credential` ou `agents-status`.
+  Versionar a fonte não autoriza bootstrap nem rotação.
+- Depois do bootstrap confirmado, `releases` é somente leitura por padrão e
+  preserva a ativa mais as três releases não ativas mais recentes. O modo
+  `--prune --confirm=DELETE-OLD-RELEASES`, `rollback-artifacts` e
+  `rotate-report-credential` exigem aprovação explícita em cada uso. Backups
+  nunca participam da retenção de releases.
 - O wrapper restaura automaticamente o JAR anterior se o novo backend falhar
   sem avanço do Flyway, e restaura o frontend anterior se a validação pública
   falhar. Não existe subcomando explícito de rollback; se o Flyway avançar ele
   interrompe sem rollback de banco. Não invente rollback manual. Rollback de
   banco exige necessidade comprovada e aprovação explícita.
 - Printer Agent e PagBank Agent são agentes da estação Windows, não serviços da
-  VPS. Não afirme que estão saudáveis apenas pelo status do backend. A validação
-  de heartbeat/dispositivo requer mecanismo/autenticação operacional existente;
-  se indisponível, é bloqueio sério.
+  VPS. A V53 adiciona heartbeat persistido do Printer e o endpoint operacional
+  agrega ambos sem afetar o health geral. Depois do bootstrap confirmado, exija
+  `agents-status --strict`; antes dele, a ausência do mecanismo é bloqueio sério.
 
 ## Comando `loc`
 
@@ -159,13 +174,19 @@ Execute nesta ordem, mantendo logs temporários fora dos arquivos versionados:
    backend validada.` e `Heartbeat enviado.`. Faça smoke tests seguros dos fluxos
    disponíveis sem criar/corromper dados reais.
 8. Somente após validação total, execute o Git completo na branch atual:
-   rode Gitleaks com `--redact` sobre o diretório e todo o histórico ->
+   rode `./scripts/scan-secrets.sh publishable` e
+   `./scripts/scan-secrets.sh history` -> opcionalmente rode
+   `./scripts/scan-secrets.sh workspace` apenas como diagnóstico ->
    `status/diff` -> `git add -A` (incluindo mudanças preexistentes) -> revise o
-   staged diff e rode Gitleaks novamente -> crie mensagem fiel ao conjunto ->
-   commit -> `git pull --rebase` do upstream -> resolva apenas conflitos simples
-   e inequívocos -> revalide e repita a varredura se houve integração -> `git
-   push`. Nunca faça push com achado real. Ausência de scanner, remoto/upstream,
-   conflito não trivial ou rejeição de push é problema sério.
+   staged diff e rode `./scripts/scan-secrets.sh staged` -> crie mensagem fiel
+   ao conjunto -> commit -> `git pull --rebase` do upstream -> resolva apenas
+   conflitos simples e inequívocos -> revalide e repita as varreduras
+   bloqueantes se houve integração -> `git push`. Nunca faça commit/push com
+   segredo no conteúdo publicável, staged ou histórico. Segredo exclusivamente
+   em arquivo local explicitamente ignorado gera aviso e deve ser preservado;
+   não o adicione, mova, copie, imprima ou use para novo pareamento. Ausência de
+   scanner, remoto/upstream, conflito não trivial ou rejeição de push é problema
+   sério.
 9. Em bloco de limpeza garantido mesmo após falha, envie `SIGTERM` somente aos
    PIDs deste checkout iniciados/identificados pela execução e confirme que
    ficaram encerrados. Encerre PostgreSQL somente se ele tiver sido iniciado
@@ -197,7 +218,8 @@ Execute nesta ordem, mantendo logs temporários fora dos arquivos versionados:
    se o preflight terminar com `PREFLIGHT_OK` e migrations pendentes forem
    classificadas como seguras. Migration destrutiva exige aprovação.
 8. Aguarde o wrapper concluir. Exija `DEPLOY_OK`, caminho do backup e Flyway
-   antes/depois. Depois execute somente o `status` autorizado.
+   antes/depois. Depois execute `status` e, somente se o bootstrap endurecido
+   estiver confirmado, `agents-status --strict`.
 9. Valide backend, frontend, PostgreSQL/Flyway por evidência do wrapper, logs
    disponibilizados por ele, health interno, site público e smoke tests do
    `DEPLOY.md`. Testes autenticados e agentes exigem configuração/sessão válida;
