@@ -44,8 +44,8 @@ class BarTabEntityTest {
         assertEquals(BarTabStatus.OPEN, tab.getStatus());
         assertNull(tab.getClosureType());
         assertEquals(19L, tab.getEmployeeId());
-        assertNull(tab.getVehicleNameSnapshot());
-        assertNull(tab.getVehiclePlateSnapshot());
+        assertEquals("Onix", tab.getVehicleNameSnapshot());
+        assertEquals("ABC1D23", tab.getVehiclePlateSnapshot());
     }
 
     @Test

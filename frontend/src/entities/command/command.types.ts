@@ -42,6 +42,8 @@ export type OpenBarCommandInput = {
 export type AddBarCommandItemInput = {
   catalogItemId: number;
   quantity?: number;
+  vehicleName?: string;
+  vehiclePlate?: string;
 };
 
 export type ResolvedBarCommandItemInput = {

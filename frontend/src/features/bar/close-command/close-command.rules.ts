@@ -32,7 +32,9 @@ export function shouldRequestVehicleDetails(
   command: BarCommand,
   catalogEntries: readonly BarCatalogItem[]
 ) {
-  return command.clientId == null && command.items.some((item) =>
+  return command.clientId == null
+    && (!command.vehicleName || !command.vehiclePlate)
+    && command.items.some((item) =>
     catalogEntries.some(
       (catalogEntry) =>
         catalogEntry.id === item.catalogItemId &&

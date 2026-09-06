@@ -24,7 +24,7 @@ public class OperationalOrderRenderer {
             BarTabResponse tab,
             List<BarTabLineResponse> lines
     ) {
-        return render("PEDIDO - SERVIÇOS", tab, lines);
+        return render("PEDIDO - SERVIÇOS", tab, lines, true);
     }
 
     public String renderSingleItem(
@@ -38,7 +38,7 @@ public class OperationalOrderRenderer {
             BarTabResponse tab,
             BarTabLineResponse line
     ) {
-        return render("PEDIDO - SERVIÇO", tab, List.of(line));
+        return render("PEDIDO - SERVIÇO", tab, List.of(line), true);
     }
 
     private String render(
@@ -46,11 +46,25 @@ public class OperationalOrderRenderer {
             BarTabResponse tab,
             List<BarTabLineResponse> lines
     ) {
+        return render(title, tab, lines, false);
+    }
+
+    private String render(
+            String title,
+            BarTabResponse tab,
+            List<BarTabLineResponse> lines,
+            boolean includeVehicle
+    ) {
         StringBuilder text = new StringBuilder()
                 .append(title)
                 .append("\n\nCOMANDA:\n")
                 .append(normalize(tab.name()))
                 .append("\n\n");
+
+        if (includeVehicle) {
+            text.append("VEÍCULO: ").append(normalize(tab.vehicleName())).append('\n')
+                    .append("PLACA: ").append(normalize(tab.vehiclePlate())).append("\n\n");
+        }
 
         for (BarTabLineResponse line : lines) {
             text.append(line.quantity())

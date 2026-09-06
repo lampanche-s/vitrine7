@@ -24,6 +24,8 @@ class OperationalOrderRendererTest {
         assertTrue(text.contains("COMANDA:\njose acerto com cibele"));
         assertTrue(text.contains("2x COCA-COLA"));
         assertTrue(text.contains("3x ÁGUA"));
+        assertFalse(text.contains("VEÍCULO:"));
+        assertFalse(text.contains("PLACA:"));
         assertFalse(text.contains("12,34"));
         assertFalse(text.contains("R$"));
     }
@@ -35,6 +37,8 @@ class OperationalOrderRendererTest {
         String text = renderer.renderServices(tab(wash, vacuum), List.of(wash, vacuum));
 
         assertTrue(text.startsWith("PEDIDO - SERVIÇOS\n"));
+        assertTrue(text.contains("VEÍCULO: Onix prata"));
+        assertTrue(text.contains("PLACA: ABC1D23"));
         assertTrue(text.contains("1x LAVAGEM COMPLETA"));
         assertTrue(text.contains("2x ASPIRAÇÃO"));
     }
@@ -54,6 +58,8 @@ class OperationalOrderRendererTest {
         String text = renderer.renderSingleService(tab(wash), wash);
 
         assertTrue(text.startsWith("PEDIDO - SERVIÇO\n"));
+        assertTrue(text.contains("VEÍCULO: Onix prata"));
+        assertTrue(text.contains("PLACA: ABC1D23"));
         assertTrue(text.contains("1x LAVAGEM COMPLETA"));
     }
 
@@ -73,7 +79,7 @@ class OperationalOrderRendererTest {
         return new BarTabResponse(
                 44L, "jose acerto com cibele", null, null, "OPEN",
                 null, null, 0L, 0L, 0L, null, null, false,
-                null, null, null, false, List.of(lines), 9L, null, null
+                null, null, "Onix prata", "ABC1D23", null, false, List.of(lines), 9L, null, null
         );
     }
 }

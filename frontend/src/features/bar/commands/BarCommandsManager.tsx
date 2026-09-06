@@ -258,6 +258,8 @@ export function BarCommandsManager({
     useState<string | null>(null);
   const [vehicleName, setVehicleName] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
+  const [pendingService, setPendingService] = useState<CommandCatalogProduct | null>(null);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [currentReceipt, setCurrentReceipt] =
     useState<ReceiptDocument | null>(null);
   const [
@@ -438,6 +440,14 @@ export function BarCommandsManager({
     selectedCommand
       ? shouldRequestVehicleDetails(selectedCommand, catalogEntries)
       : false;
+
+  const vehicleDetailsValid = (() => {
+    const normalizedName = vehicleName.trim().replace(/\s+/g, " ");
+    const plate = vehiclePlate.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    return normalizedName.length > 0
+      && normalizedName.length <= 120
+      && (/^[A-Z]{3}[0-9]{4}$/.test(plate) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(plate));
+  })();
 
   const catalogProducts =
     useMemo<CommandCatalogProduct[]>(
@@ -698,6 +708,18 @@ export function BarCommandsManager({
       return;
     }
 
+    if (
+      product.type === "SERVICE"
+      && selectedCommand.clientId == null
+      && (!selectedCommand.vehicleName || !selectedCommand.vehiclePlate)
+    ) {
+      setVehicleName("");
+      setVehiclePlate("");
+      setPendingService(product);
+      setIsVehicleModalOpen(true);
+      return;
+    }
+
     const added =
       await onAddCommandItem(
         selectedCommand.id,
@@ -711,6 +733,31 @@ export function BarCommandsManager({
       return;
     }
 
+    setCatalogSearch("");
+  }
+
+  function closeVehicleModal() {
+    setIsVehicleModalOpen(false);
+    setPendingService(null);
+    setVehicleName("");
+    setVehiclePlate("");
+  }
+
+  async function confirmPendingService() {
+    if (!selectedCommand || !pendingService || !vehicleDetailsValid) {
+      return;
+    }
+
+    const added = await onAddCommandItem(selectedCommand.id, {
+      catalogItemId: pendingService.id,
+      quantity: 1,
+      vehicleName: vehicleName.trim().replace(/\s+/g, " "),
+      vehiclePlate: vehiclePlate.replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+    });
+    if (!added) {
+      return;
+    }
+    closeVehicleModal();
     setCatalogSearch("");
   }
 
@@ -1739,6 +1786,27 @@ export function BarCommandsManager({
         <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
           <Button variant="secondary" onClick={() => setIsUnregisteredClientConfirmOpen(false)}>Cancelar</Button>
           <Button variant="primary" onClick={() => void createCommand(null)}>Criar comanda avulsa</Button>
+        </div>
+      </AnimatedModal>
+
+      <AnimatedModal
+        open={isVehicleModalOpen && Boolean(pendingService)}
+        onClose={closeVehicleModal}
+        labelledBy="bar-command-vehicle-title"
+        backdropClassName="inset-0 z-[210] p-4"
+        panelClassName="w-full max-w-md overflow-hidden rounded-[4px] border border-[var(--border-soft)] bg-[var(--surface-card)] shadow-[var(--shadow-modal)]"
+      >
+        <div className="border-b border-[var(--border-subtle)] p-5">
+          <h3 id="bar-command-vehicle-title" className="text-lg font-semibold text-[var(--text-base)]">Identificação do veículo</h3>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">Informe o veículo para adicionar {pendingService?.name ?? "o serviço"}.</p>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <TextField label="Veículo" value={vehicleName} onChange={setVehicleName} placeholder="Ex.: Onix prata" />
+          <TextField label="Placa" value={vehiclePlate} onChange={setVehiclePlate} placeholder="AAA1234" />
+        </div>
+        <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] p-5">
+          <Button variant="secondary" onClick={closeVehicleModal}>Cancelar</Button>
+          <Button variant="primary" disabled={!vehicleDetailsValid} onClick={() => void confirmPendingService()}>Adicionar serviço</Button>
         </div>
       </AnimatedModal>
 

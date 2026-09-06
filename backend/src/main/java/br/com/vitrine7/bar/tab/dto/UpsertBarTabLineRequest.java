@@ -22,6 +22,13 @@ public record UpsertBarTabLineRequest(
                 value = 99_999_999,
                 message = "O valor unitario excede o limite permitido."
         )
-        Long unitPriceCents
+        Long unitPriceCents,
+
+        String vehicleName,
+
+        String vehiclePlate
 ) {
+    public UpsertBarTabLineRequest(Integer quantity, Long unitPriceCents) {
+        this(quantity, unitPriceCents, null, null);
+    }
 }

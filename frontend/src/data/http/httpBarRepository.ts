@@ -656,6 +656,8 @@ export const httpBarRepository: BarRepository = {
         {
           quantity:
             input.quantity ?? 1,
+          ...(input.vehicleName != null ? { vehicleName: input.vehicleName } : {}),
+          ...(input.vehiclePlate != null ? { vehiclePlate: input.vehiclePlate } : {}),
         }
       );
 

@@ -198,6 +198,16 @@ public class BarTabEntity {
         this.vehiclePlateSnapshot = vehiclePlate;
     }
 
+    public boolean hasCompleteVehicleSnapshot() {
+        return vehicleNameSnapshot != null && !vehicleNameSnapshot.isBlank()
+                && vehiclePlateSnapshot != null && !vehiclePlateSnapshot.isBlank();
+    }
+
+    public void clearVehicleSnapshot() {
+        this.vehicleNameSnapshot = null;
+        this.vehiclePlateSnapshot = null;
+    }
+
     public void markClosed(
             UUID finalizedCheckoutId,
             OffsetDateTime closedAt
@@ -282,8 +292,6 @@ public class BarTabEntity {
         }
         this.closedAt = null;
         this.closureType = null;
-        this.vehicleNameSnapshot = null;
-        this.vehiclePlateSnapshot = null;
         this.reopenedAt = reopenedAt;
         this.reopenedByUserId = actorUserId;
         this.reopenCount = (reopenCount == null ? 0 : reopenCount) + 1;

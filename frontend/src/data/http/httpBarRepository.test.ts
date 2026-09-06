@@ -328,6 +328,23 @@ describe("httpBarRepository", () => {
     });
   });
 
+  it("encaminha veículo e placa na inclusão de serviço", async () => {
+    httpClient.put.mockResolvedValueOnce(tabResponse());
+    const { httpBarRepository } = await import("./httpBarRepository");
+
+    await httpBarRepository.addCommandItem(31, {
+      catalogItemId: 5,
+      vehicleName: "Onix prata",
+      vehiclePlate: "ABC1D23",
+    });
+
+    expect(httpClient.put).toHaveBeenCalledWith("/bar/tabs/31/catalog/5", {
+      quantity: 1,
+      vehicleName: "Onix prata",
+      vehiclePlate: "ABC1D23",
+    });
+  });
+
   it("altera quantidade e preço personalizado", async () => {
     httpClient.put.mockResolvedValueOnce(tabResponse());
     const { httpBarRepository } =

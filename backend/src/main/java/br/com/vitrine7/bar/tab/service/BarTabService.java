@@ -18,6 +18,7 @@ import br.com.vitrine7.checkout.entity.CheckoutOperationType;
 import br.com.vitrine7.checkout.entity.CheckoutSessionEntity;
 import br.com.vitrine7.checkout.repository.CheckoutSessionRepository;
 import br.com.vitrine7.catalog.entity.CatalogEntryEntity;
+import br.com.vitrine7.catalog.entity.CatalogEntryType;
 import br.com.vitrine7.catalog.repository.CatalogEntryRepository;
 import br.com.vitrine7.client.entity.ClientEntity;
 import br.com.vitrine7.client.repository.ClientRepository;
@@ -257,6 +258,10 @@ public class BarTabService {
         }
 
         lineRepository.flush();
+        if (lineRepository.findAllByTabIdOrderByIdAsc(tabId).stream()
+                .noneMatch(line -> line.getEntryTypeSnapshot() == CatalogEntryType.SERVICE)) {
+            tab.clearVehicleSnapshot();
+        }
         refreshDraftTotal(tab);
 
         return buildResponse(tab);
@@ -269,6 +274,8 @@ public class BarTabService {
     ) {
         BarTabEntity tab =
                 getEditableTab(tabId);
+
+        captureVehicleSnapshotForService(tab, entry, request.vehicleName(), request.vehiclePlate());
 
         BarTabLineEntity line =
                 lineRepository
@@ -502,9 +509,37 @@ public class BarTabService {
         return buildResponse(tab);
     }
 
-    private void captureVehicleSnapshot(BarTabEntity tab, List<BarTabLineEntity> lines, String requestedVehicleName, String requestedVehiclePlate) {
-        boolean hasService = lines.stream().anyMatch(line -> line.getEntryTypeSnapshot() == br.com.vitrine7.catalog.entity.CatalogEntryType.SERVICE);
-        if (!hasService) return;
+    private void captureVehicleSnapshotForService(
+            BarTabEntity tab,
+            CatalogEntryEntity entry,
+            String requestedVehicleName,
+            String requestedVehiclePlate
+    ) {
+        if (entry.getEntryType() != CatalogEntryType.SERVICE || tab.hasCompleteVehicleSnapshot()) {
+            return;
+        }
+        captureVehicleSnapshot(tab, requestedVehicleName, requestedVehiclePlate);
+    }
+
+    private void captureVehicleSnapshot(
+            BarTabEntity tab,
+            List<BarTabLineEntity> lines,
+            String requestedVehicleName,
+            String requestedVehiclePlate
+    ) {
+        boolean hasService = lines.stream()
+                .anyMatch(line -> line.getEntryTypeSnapshot() == CatalogEntryType.SERVICE);
+        if (!hasService || tab.hasCompleteVehicleSnapshot()) {
+            return;
+        }
+        captureVehicleSnapshot(tab, requestedVehicleName, requestedVehiclePlate);
+    }
+
+    private void captureVehicleSnapshot(
+            BarTabEntity tab,
+            String requestedVehicleName,
+            String requestedVehiclePlate
+    ) {
         if (tab.getClientId() != null) {
             ClientEntity client = clientRepository.findByIdAndDeletedAtIsNull(tab.getClientId()).orElseThrow(() -> new BusinessException("CLIENT_NOT_AVAILABLE", "O cliente relacionado não está disponível."));
             tab.captureVehicleSnapshot(client.getVehicleName(), client.getPlate());

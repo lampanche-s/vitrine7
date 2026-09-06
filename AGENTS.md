@@ -49,8 +49,11 @@ alias de shell: é uma instrução permanente para o Codex neste workspace.
 - PostgreSQL local: serviço systemd `postgresql`, listener `127.0.0.1:5432`,
   banco `vitrine7_db`. Verificações: `systemctl is-active postgresql`,
   `pg_isready -h 127.0.0.1 -p 5432` e consulta somente leitura por `psql`.
-  Use as variáveis/configurações já existentes; não imprima senha na linha de
-  comando ou saída.
+  As credenciais exclusivas locais do Vitrine 7 ficam em `.codex-run/loc.env`,
+  arquivo ignorado e com modo `0600`, contendo `DB_USERNAME` e `DB_PASSWORD`.
+  Todo fluxo local deve validar sua existência e permissões e carregá-lo com
+  `set -a; . .codex-run/loc.env; set +a` antes de consultas, Flyway, testes ou
+  inicialização do backend; nunca imprima a senha na linha de comando ou saída.
 - Flyway: migrations em `backend/src/main/resources/db/migration`; não há CLI
   ou plugin Maven Flyway separado. `application-dev.yml` habilita
   `validate-on-migrate`; portanto a forma real de validar/aplicar migrations é
@@ -153,6 +156,11 @@ Execute nesta ordem, mantendo logs temporários fora dos arquivos versionados:
    como conflito sério; não escolha outra porta sem base real.
 3. Verifique PostgreSQL. Se estiver inativo, inicie somente o serviço
    `postgresql` pelo mecanismo systemd disponível e confirme com `pg_isready`.
+   Antes de qualquer consulta, Flyway, teste ou backend, confirme que
+   `.codex-run/loc.env` existe, está ignorado pelo Git e tem modo `0600`; então
+   carregue `DB_USERNAME` e `DB_PASSWORD` sem shell trace e sem imprimir seus
+   valores. A ausência, permissão incorreta ou falha de autenticação é bloqueio
+   sério; não use usuário/credencial de outro projeto.
 4. Liste migrations locais, consulte `flyway_schema_history` e revise cada
    migration pendente. Mudança destrutiva exige aprovação. Para migrations
    seguras, carregue `APP_PRINTER_AGENT_TOKEN` a partir de `agent.token` do

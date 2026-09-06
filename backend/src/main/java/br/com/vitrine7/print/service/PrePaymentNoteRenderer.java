@@ -51,6 +51,10 @@ public class PrePaymentNoteRenderer {
         lines.add(center("NAO E DOCUMENTO FISCAL"));
         lines.add(DIVIDER);
         lines.add("COMANDA: " + normalize(tab.name()));
+        if (!normalize(tab.vehicleName()).isEmpty() && !normalize(tab.vehiclePlate()).isEmpty()) {
+            lines.add("VEÍCULO: " + normalize(tab.vehicleName()));
+            lines.add("PLACA: " + normalize(tab.vehiclePlate()));
+        }
         lines.add("DATA: " + DATE_TIME_FORMATTER.format(
                 OffsetDateTime.now(clock).atZoneSameInstant(businessZone)
         ));

@@ -40,6 +40,8 @@ class PrePaymentNoteRendererTest {
                 true,
                 null,
                 null,
+                "Onix prata",
+                "ABC1D23",
                 null,
                 false,
                 List.of(new BarTabLineResponse(
@@ -69,6 +71,8 @@ class PrePaymentNoteRendererTest {
         assertTrue(text.contains("CONFERENCIA DE CONSUMO"));
         assertTrue(text.contains("NAO E DOCUMENTO FISCAL"));
         assertTrue(text.contains("COMANDA: Mesa 9"));
+        assertTrue(text.contains("VEÍCULO: Onix prata"));
+        assertTrue(text.contains("PLACA: ABC1D23"));
         assertTrue(text.contains("2x"));
         assertTrue(text.contains("Espeto de carne"));
         assertTrue(text.contains("Refrigerante"));

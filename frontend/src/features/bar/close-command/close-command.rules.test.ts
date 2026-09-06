@@ -73,6 +73,14 @@ describe("closeBarCommand", () => {
     }
   );
 
+  it("não solicita novamente veículo quando o snapshot do serviço já existe", () => {
+    expect(shouldRequestVehicleDetails({
+      ...commandWith(null, service.id),
+      vehicleName: "Onix prata",
+      vehiclePlate: "ABC1D23",
+    }, [service, item])).toBe(false);
+  });
+
   it("preserva itens nominais com quantidade e valores para o recibo", () => {
     const command: BarCommand = {
       id: 7,
