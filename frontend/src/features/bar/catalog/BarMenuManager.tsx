@@ -47,6 +47,7 @@ import {
 } from "../../../shared/lib/currency";
 import type { Supplier } from "../../../entities/supplier";
 import { repositories } from "../../../data/repositories";
+import { ProtectedCatalogAccessModal } from "./ProtectedCatalogAccessModal";
 
 type CatalogForm = {
   name: string;
@@ -81,6 +82,7 @@ const catalogTypeLabels: Record<
 export function BarMenuManager({
   catalogEntries,
   onCreate,
+  onVerifyPassword,
   onUpdate,
   onRemove,
 }: {
@@ -88,12 +90,13 @@ export function BarMenuManager({
   onCreate: (
     input: BarCatalogItemInput
   ) => Promise<BarCatalogItem | null>;
+  onVerifyPassword: (password: string) => Promise<boolean>;
   onUpdate: (
     entryId: number,
-    input: BarCatalogItemInput
+    input: BarCatalogItemInput, password: string
   ) => Promise<BarCatalogItem | null>;
   onRemove: (
-    entryId: number
+    entryId: number, password: string
   ) => Promise<boolean>;
 }) {
   const [searchTerm, setSearchTerm] =
@@ -113,6 +116,10 @@ export function BarMenuManager({
   const [currentPage, setCurrentPage] =
     useState(1);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [accessEntry, setAccessEntry] = useState<BarCatalogItem | null>(null);
+  const [accessAction, setAccessAction] = useState<"edit" | "delete" | null>(null);
+  const [catalogPassword, setCatalogPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -282,6 +289,7 @@ export function BarMenuManager({
   function closeModal() {
     setIsModalOpen(false);
     resetForm();
+    setCatalogPassword("");
   }
 
   async function handleSubmit() {
@@ -323,7 +331,7 @@ export function BarMenuManager({
     const result = editingEntry
       ? await onUpdate(
           editingEntry.id,
-          input
+          input, catalogPassword
         )
       : await onCreate(input);
 
@@ -352,15 +360,27 @@ export function BarMenuManager({
 
     try {
       const removed = await onRemove(
-        entryPendingDelete.id
+        entryPendingDelete.id, catalogPassword
       );
 
       if (removed) {
         setEntryPendingDelete(null);
+        setCatalogPassword("");
       }
     } finally {
       setIsDeletingEntry(false);
     }
+  }
+
+  function requestAccess(entry: BarCatalogItem, action: "edit" | "delete") {
+    setAccessEntry(entry); setAccessAction(action); setCatalogPassword(""); setPasswordError("");
+  }
+  function cancelAccess() { setAccessEntry(null); setAccessAction(null); setCatalogPassword(""); setPasswordError(""); }
+  async function confirmAccess() {
+    if (!accessEntry || !accessAction || !(await onVerifyPassword(catalogPassword))) { setPasswordError("Senha incorreta."); return; }
+    const entry = accessEntry; const action = accessAction;
+    setAccessEntry(null); setAccessAction(null); setPasswordError("");
+    if (action === "edit") openEditModal(entry); else setEntryPendingDelete(entry);
   }
 
   return (
@@ -420,7 +440,7 @@ export function BarMenuManager({
                       size="compact"
                       variant="secondary"
                       leadingIcon={<Pencil />}
-                      onClick={() => openEditModal(entry)}
+                      onClick={() => requestAccess(entry, "edit")}
                     >
                       Editar
                     </Button>
@@ -428,7 +448,7 @@ export function BarMenuManager({
                       size="compact"
                       variant="danger"
                       leadingIcon={<Trash2 />}
-                      onClick={() => setEntryPendingDelete(entry)}
+                      onClick={() => requestAccess(entry, "delete")}
                     >
                       Excluir
                     </Button>
@@ -609,9 +629,18 @@ export function BarMenuManager({
         </div>
       </AnimatedModal>
 
+      <ProtectedCatalogAccessModal
+        open={accessEntry !== null}
+        password={catalogPassword}
+        error={passwordError}
+        onPasswordChange={(value) => { setCatalogPassword(value); setPasswordError(""); }}
+        onCancel={cancelAccess}
+        onConfirm={() => void confirmAccess()}
+      />
+
       <AnimatedModal
         open={entryPendingDelete !== null}
-        onClose={() => setEntryPendingDelete(null)}
+        onClose={() => { setEntryPendingDelete(null); setCatalogPassword(""); }}
         labelledBy="bar-catalog-delete-title"
         closeOnBackdrop={!isDeletingEntry}
         closeOnEscape={!isDeletingEntry}
@@ -632,7 +661,7 @@ export function BarMenuManager({
               <Button
                 variant="secondary"
                 disabled={isDeletingEntry}
-                onClick={() => setEntryPendingDelete(null)}
+                onClick={() => { setEntryPendingDelete(null); setCatalogPassword(""); }}
               >
                 Cancelar
               </Button>

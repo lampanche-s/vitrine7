@@ -194,6 +194,7 @@ public class SecurityConfig {
                         "X-Terminal-Device-Token",
                         "X-Printer-Agent-Token",
                         "X-Report-Password",
+                        "X-Catalog-Password",
                         "X-User-Activity",
                         "X-XSRF-TOKEN",
                         "X-Requested-With"

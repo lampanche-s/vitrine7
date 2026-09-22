@@ -883,16 +883,27 @@ export const httpBarRepository: BarRepository = {
     );
   },
 
+  async verifyCatalogPassword(password: string): Promise<boolean> {
+    try {
+      await httpClient.post("/catalog/access/verify", { password });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   async updateCatalogEntry(
     entryId,
-    input
+    input,
+    password
   ): Promise<BarCatalogItem> {
     const entry =
       await httpClient.put<
         CatalogEntryResponse
       >(
         `/catalog/${entryId}`,
-        catalogEntryPayload(input)
+        catalogEntryPayload(input),
+        { headers: { "X-Catalog-Password": password } }
       );
 
     return mapCatalogEntry(
@@ -901,10 +912,12 @@ export const httpBarRepository: BarRepository = {
   },
 
   async removeCatalogEntry(
-    entryId
+    entryId,
+    password
   ): Promise<void> {
     await httpClient.delete(
-      `/catalog/${entryId}`
+      `/catalog/${entryId}`,
+      { headers: { "X-Catalog-Password": password } }
     );
   },
 };

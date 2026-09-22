@@ -5,6 +5,7 @@ import br.com.vitrine7.catalog.dto.CreateCatalogEntryRequest;
 import br.com.vitrine7.catalog.dto.UpdateCatalogEntryRequest;
 import br.com.vitrine7.catalog.entity.CatalogEntryType;
 import br.com.vitrine7.catalog.service.CatalogEntryService;
+import br.com.vitrine7.catalog.service.CatalogAccessService;
 import br.com.vitrine7.common.pagination.PageResponse;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CatalogEntryController {
 
     private final CatalogEntryService service;
+    private final CatalogAccessService accessService;
 
     @GetMapping
     public PageResponse<CatalogEntryResponse> list(
@@ -90,9 +93,11 @@ public class CatalogEntryController {
     @PreAuthorize("hasAuthority('bar:manage-catalog')")
     public CatalogEntryResponse update(
             @PathVariable Long id,
+            @RequestHeader(value = "X-Catalog-Password", required = false) String password,
             @Valid
             @RequestBody UpdateCatalogEntryRequest request
     ) {
+        accessService.requireAccess(password);
         return service.update(id, request);
     }
 
@@ -101,9 +106,12 @@ public class CatalogEntryController {
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
 
+            @RequestHeader(value = "X-Catalog-Password", required = false) String password,
+
             @AuthenticationPrincipal
             VitrineUserPrincipal principal
     ) {
+        accessService.requireAccess(password);
         service.delete(
                 id,
                 principal.getId()

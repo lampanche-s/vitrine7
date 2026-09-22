@@ -88,6 +88,7 @@ function BarContentView({
     closeVoucher,
 
     createCatalogEntry,
+    verifyCatalogPassword,
     updateCatalogEntry,
     removeCatalogEntry,
   } = useBarDomain();
@@ -134,6 +135,7 @@ function BarContentView({
         <BarMenuManager
           catalogEntries={catalogEntries}
           onCreate={createCatalogEntry}
+          onVerifyPassword={verifyCatalogPassword}
           onUpdate={updateCatalogEntry}
           onRemove={removeCatalogEntry}
         />

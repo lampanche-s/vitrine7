@@ -2,6 +2,7 @@ package br.com.vitrine7.common.exception;
 
 import br.com.vitrine7.common.response.ApiErrorResponse;
 import br.com.vitrine7.common.response.FieldErrorResponse;
+import br.com.vitrine7.catalog.exception.CatalogAccessDeniedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -254,6 +255,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN,
                 "REPORT_ACCESS_DENIED",
                 "Senha de acesso aos relatórios inválida.",
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(CatalogAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleCatalogAccessDenied(
+            CatalogAccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                CatalogAccessDeniedException.CODE,
+                exception.getMessage(),
                 request.getRequestURI(),
                 List.of()
         );

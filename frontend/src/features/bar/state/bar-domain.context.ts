@@ -76,12 +76,15 @@ export type BarDomainContextValue = {
   createCatalogEntry: (
     input: BarCatalogItemInput
   ) => Promise<BarCatalogItem | null>;
+  verifyCatalogPassword: (password: string) => Promise<boolean>;
   updateCatalogEntry: (
     entryId: number,
-    input: BarCatalogItemInput
+    input: BarCatalogItemInput,
+    password: string
   ) => Promise<BarCatalogItem | null>;
   removeCatalogEntry: (
-    entryId: number
+    entryId: number,
+    password: string
   ) => Promise<boolean>;
 };
 

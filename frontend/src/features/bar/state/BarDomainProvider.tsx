@@ -405,14 +405,16 @@ export function BarDomainProvider({
 
   function updateCatalogEntry(
     entryId: number,
-    input: BarCatalogItemInput
+    input: BarCatalogItemInput,
+    password: string
   ): Promise<BarCatalogItem | null> {
     return executeMutation(
       async () => {
         const entry =
           await repository.updateCatalogEntry(
             entryId,
-            input
+            input,
+            password
           );
 
         dispatch({
@@ -426,11 +428,12 @@ export function BarDomainProvider({
   }
 
   function removeCatalogEntry(
-    entryId: number
+    entryId: number,
+    password: string
   ): Promise<boolean> {
     return executeMutation(
       async () => {
-        await repository.removeCatalogEntry(entryId);
+        await repository.removeCatalogEntry(entryId, password);
         dispatch({
           type: "catalog/removed",
           payload: entryId,
@@ -439,6 +442,10 @@ export function BarDomainProvider({
       },
       false
     );
+  }
+
+  function verifyCatalogPassword(password: string): Promise<boolean> {
+    return repository.verifyCatalogPassword(password);
   }
 
   return (
@@ -466,6 +473,7 @@ export function BarDomainProvider({
         closeCommand,
         closeVoucher,
         createCatalogEntry,
+        verifyCatalogPassword,
         updateCatalogEntry,
         removeCatalogEntry,
       }}

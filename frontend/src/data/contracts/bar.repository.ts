@@ -102,12 +102,16 @@ export interface BarRepository {
     input: BarCatalogItemInput
   ): Promise<BarCatalogItem>;
 
+  verifyCatalogPassword(password: string): Promise<boolean>;
+
   updateCatalogEntry(
     entryId: number,
-    input: BarCatalogItemInput
+    input: BarCatalogItemInput,
+    password: string
   ): Promise<BarCatalogItem>;
 
   removeCatalogEntry(
-    entryId: number
+    entryId: number,
+    password: string
   ): Promise<void>;
 }

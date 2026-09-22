@@ -234,6 +234,8 @@ describe("httpBarRepository", () => {
       stockQuantity: 20,
       minimumStockQuantity: 5,
     });
+    httpClient.post.mockResolvedValueOnce(undefined);
+    const verified = await httpBarRepository.verifyCatalogPassword("segredo");
     const updated =
       await httpBarRepository.updateCatalogEntry(
         9,
@@ -244,9 +246,10 @@ describe("httpBarRepository", () => {
           stockEnabled: true,
           stockQuantity: 18,
           minimumStockQuantity: 5,
-        }
+        },
+        "segredo"
       );
-    await httpBarRepository.removeCatalogEntry(9);
+    await httpBarRepository.removeCatalogEntry(9, "segredo");
 
     expect(httpClient.post).toHaveBeenCalledWith(
       "/catalog",
@@ -260,8 +263,19 @@ describe("httpBarRepository", () => {
       }
     );
     expect(updated.price).toBe(26.9);
+    expect(verified).toBe(true);
+    expect(httpClient.post).toHaveBeenCalledWith(
+      "/catalog/access/verify",
+      { password: "segredo" }
+    );
+    expect(httpClient.put).toHaveBeenCalledWith(
+      "/catalog/9",
+      expect.any(Object),
+      { headers: { "X-Catalog-Password": "segredo" } }
+    );
     expect(httpClient.delete).toHaveBeenCalledWith(
-      "/catalog/9"
+      "/catalog/9",
+      { headers: { "X-Catalog-Password": "segredo" } }
     );
   });
 
