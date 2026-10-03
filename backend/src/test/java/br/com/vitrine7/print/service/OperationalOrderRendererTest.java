@@ -2,9 +2,12 @@ package br.com.vitrine7.print.service;
 
 import br.com.vitrine7.bar.tab.dto.BarTabLineResponse;
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
+import br.com.vitrine7.common.config.BusinessProperties;
+import br.com.vitrine7.catalog.entity.CatalogEntryType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,7 +15,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OperationalOrderRendererTest {
 
     private final OperationalOrderRenderer renderer =
-            new OperationalOrderRenderer();
+            new OperationalOrderRenderer(new BusinessProperties(
+                    "America/Bahia",
+                    new BusinessProperties.Establishment("Vitrine 7", null, null, null)
+            ));
+
+    @Test
+    void rendersOnlyAddedQuantityWithOperatorTimeAndAddedValue() {
+        String text = renderer.renderAddedEntry(
+                "Mesa 4", CatalogEntryType.ITEM, "Coca-Cola", 2, 1234L, "Romario",
+                OffsetDateTime.parse("2026-10-03T23:15:00Z")
+        );
+
+        assertTrue(text.contains("COMANDA: Mesa 4"));
+        assertTrue(text.contains("DATA: 03/10/2026 20:15"));
+        assertTrue(text.contains("OPERADOR: Romario"));
+        assertTrue(text.contains("TIPO: ITEM"));
+        assertTrue(text.contains("2x COCA-COLA"));
+        assertTrue(text.contains("VALOR: R$"));
+        assertTrue(text.contains("24,68"));
+    }
+
+    @Test
+    void rendersAddedServiceWithExplicitTypeAndIncrementalValue() {
+        String text = renderer.renderAddedEntry(
+                "Mesa 4", CatalogEntryType.SERVICE, "Lavagem completa", 1,
+                35000L, "Will", OffsetDateTime.parse("2026-10-03T23:15:00Z")
+        );
+
+        assertTrue(text.startsWith("PEDIDO - SERVIÇO\n"));
+        assertTrue(text.contains("TIPO: SERVIÇO"));
+        assertTrue(text.contains("1x LAVAGEM COMPLETA"));
+        assertTrue(text.contains("OPERADOR: Will"));
+        assertTrue(text.contains("350,00"));
+    }
 
     @Test
     void rendersAllItemsWithoutPrices() {

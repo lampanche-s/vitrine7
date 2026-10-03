@@ -2,8 +2,15 @@ package br.com.vitrine7.print.service;
 
 import br.com.vitrine7.bar.tab.dto.BarTabLineResponse;
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
+import br.com.vitrine7.common.config.BusinessProperties;
+import br.com.vitrine7.catalog.entity.CatalogEntryType;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
@@ -12,6 +19,36 @@ public class OperationalOrderRenderer {
 
     private static final Locale PORTUGUESE_BRAZIL =
             Locale.forLanguageTag("pt-BR");
+    private static final DateTimeFormatter DATE_TIME =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    private final ZoneId businessZone;
+
+    public OperationalOrderRenderer(BusinessProperties properties) {
+        this.businessZone = ZoneId.of(properties.businessTimeZone());
+    }
+
+    public String renderAddedEntry(
+            String tabName,
+            CatalogEntryType entryType,
+            String itemName,
+            int addedQuantity,
+            long unitPriceCents,
+            String operatorName,
+            OffsetDateTime addedAt
+    ) {
+        NumberFormat currency = NumberFormat.getCurrencyInstance(PORTUGUESE_BRAZIL);
+        String type = entryType == CatalogEntryType.SERVICE ? "SERVIÇO" : "ITEM";
+        return "PEDIDO - " + type + "\n\n"
+                + "COMANDA: " + normalize(tabName) + "\n"
+                + "DATA: " + DATE_TIME.format(addedAt.atZoneSameInstant(businessZone)) + "\n"
+                + "OPERADOR: " + normalize(operatorName) + "\n\n"
+                + "TIPO: " + type + "\n"
+                + addedQuantity + "x " + normalize(itemName).toUpperCase(PORTUGUESE_BRAZIL) + "\n"
+                + "VALOR UNITARIO: " + currency.format(BigDecimal.valueOf(unitPriceCents, 2)) + "\n"
+                + "VALOR: " + currency.format(BigDecimal.valueOf(
+                        Math.multiplyExact(unitPriceCents, addedQuantity), 2)) + "\n";
+    }
 
     public String renderItems(
             BarTabResponse tab,

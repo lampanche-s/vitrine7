@@ -1,6 +1,7 @@
 package br.com.vitrine7.bar.tab.controller;
 
 import br.com.vitrine7.bar.tab.dto.BarTabCancellationResponse;
+import br.com.vitrine7.bar.tab.dto.AddBarTabLineRequest;
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
 import br.com.vitrine7.bar.tab.dto.CancelBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.CreateBarTabRequest;
@@ -143,13 +144,25 @@ public class BarTabController {
 
             @Valid
             @RequestBody
-            UpsertBarTabLineRequest request
+            UpsertBarTabLineRequest request,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
     ) {
         return tabService.upsertCatalogEntry(
                 tabId,
                 catalogEntryId,
-                request
+                request,
+                principal
         );
+    }
+
+    @PostMapping("/{tabId}/catalog/{catalogEntryId}/add")
+    public BarTabResponse addCatalogEntry(
+            @PathVariable Long tabId,
+            @PathVariable Long catalogEntryId,
+            @Valid @RequestBody AddBarTabLineRequest request,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return tabService.addCatalogEntry(tabId, catalogEntryId, request, principal);
     }
 
     @DeleteMapping(

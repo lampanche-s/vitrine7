@@ -1,6 +1,7 @@
 package br.com.vitrine7.bar.tab.service;
 
 import br.com.vitrine7.bar.tab.dto.BarTabLineResponse;
+import br.com.vitrine7.bar.tab.dto.AddBarTabLineRequest;
 import br.com.vitrine7.bar.tab.dto.BarTabResponse;
 import br.com.vitrine7.bar.tab.dto.CreateBarTabRequest;
 import br.com.vitrine7.bar.tab.dto.PrepareBarTabRequest;
@@ -29,6 +30,9 @@ import br.com.vitrine7.common.idempotency.IdempotencyFingerprintService;
 import br.com.vitrine7.common.pagination.PageResponse;
 import br.com.vitrine7.employee.entity.EmployeeEntity;
 import br.com.vitrine7.employee.repository.EmployeeRepository;
+import br.com.vitrine7.print.repository.PrintJobRepository;
+import br.com.vitrine7.print.PrintDocumentKind;
+import br.com.vitrine7.print.service.OperationalOrderRenderer;
 import br.com.vitrine7.system.user.security.VitrineUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -69,6 +73,8 @@ public class BarTabService {
     private final IdempotencyFingerprintService fingerprintService;
     private final CheckoutProperties checkoutProperties;
     private final BarTabStockService stockService;
+    private final PrintJobRepository printJobRepository;
+    private final OperationalOrderRenderer operationalOrderRenderer;
     private final Clock clock;
 
     public OperationResult create(
@@ -221,7 +227,8 @@ public class BarTabService {
     public BarTabResponse upsertCatalogEntry(
             Long tabId,
             Long catalogEntryId,
-            UpsertBarTabLineRequest request
+            UpsertBarTabLineRequest request,
+            VitrineUserPrincipal principal
     ) {
         CatalogEntryEntity entry =
                 getAvailableCatalogEntry(
@@ -236,7 +243,42 @@ public class BarTabService {
         return upsertResolvedCatalogEntry(
                 tabId,
                 entry,
-                request
+                request,
+                principal
+        );
+    }
+
+    @Transactional
+    public BarTabResponse addCatalogEntry(
+            Long tabId,
+            Long catalogEntryId,
+            AddBarTabLineRequest request,
+            VitrineUserPrincipal principal
+    ) {
+        CatalogEntryEntity entry = getAvailableCatalogEntry(catalogEntryId);
+        getEditableTab(tabId);
+        int currentQuantity = lineRepository
+                .findByTabIdAndCatalogEntryId(tabId, catalogEntryId)
+                .map(BarTabLineEntity::getQuantity)
+                .orElse(0);
+        int quantity = currentQuantity + request.quantity();
+        if (quantity > 10_000) {
+            throw new BusinessException(
+                    "BAR_TAB_QUANTITY_LIMIT",
+                    "A quantidade excede o limite permitido."
+            );
+        }
+        validateAvailableStock(entry, quantity);
+        return upsertResolvedCatalogEntry(
+                tabId,
+                entry,
+                new UpsertBarTabLineRequest(
+                        quantity,
+                        null,
+                        request.vehicleName(),
+                        request.vehiclePlate()
+                ),
+                principal
         );
     }
 
@@ -270,7 +312,8 @@ public class BarTabService {
     private BarTabResponse upsertResolvedCatalogEntry(
             Long tabId,
             CatalogEntryEntity entry,
-            UpsertBarTabLineRequest request
+            UpsertBarTabLineRequest request,
+            VitrineUserPrincipal principal
     ) {
         BarTabEntity tab =
                 getEditableTab(tabId);
@@ -284,6 +327,7 @@ public class BarTabService {
                                 entry.getId()
                         )
                         .orElse(null);
+        int previousQuantity = line == null ? 0 : line.getQuantity();
 
         if (line == null) {
             line = BarTabLineEntity.catalogEntry(
@@ -302,6 +346,29 @@ public class BarTabService {
 
         lineRepository.saveAndFlush(line);
         refreshDraftTotal(tab);
+
+        int addedQuantity = request.quantity() - previousQuantity;
+        if (addedQuantity > 0) {
+            CatalogEntryType entryType = line.getEntryTypeSnapshot();
+            PrintDocumentKind documentKind = entryType == CatalogEntryType.SERVICE
+                    ? PrintDocumentKind.SERVICE_ORDER
+                    : PrintDocumentKind.ITEM_ORDER;
+            printJobRepository.createOperationalOrder(
+                    UUID.randomUUID(),
+                    tabId,
+                    principal.getId(),
+                    documentKind.name(),
+                    operationalOrderRenderer.renderAddedEntry(
+                            tab.getName(),
+                            entryType,
+                            line.getItemNameSnapshot(),
+                            addedQuantity,
+                            line.getUnitPriceCents(),
+                            principal.getName(),
+                            OffsetDateTime.now(clock)
+                    )
+            );
+        }
 
         return buildResponse(tab);
     }

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useReducer,
   useState,
   type ReactNode,
@@ -33,6 +34,7 @@ import {
 import {
   useMutationLock,
 } from "../../../shared/hooks/useMutationLock";
+import { createSerialQueue } from "../../../shared/utils/createSerialQueue";
 
 import {
   BarDomainContext,
@@ -78,6 +80,7 @@ export function BarDomainProvider({
     isMutating,
     runMutation,
   } = useMutationLock();
+  const addQueue = useRef(createSerialQueue());
 
   const reload = useCallback(async () => {
     setIsLoading(true);
@@ -271,7 +274,7 @@ export function BarDomainProvider({
     commandId: number,
     input: AddBarCommandItemInput
   ): Promise<boolean> {
-    return executeMutation(
+    return addQueue.current(() => executeMutation(
       async () => {
         const command =
           await repository.addCommandItem(
@@ -286,7 +289,7 @@ export function BarDomainProvider({
         return true;
       },
       false
-    );
+    ));
   }
 
   function updateCommandItemQuantity(

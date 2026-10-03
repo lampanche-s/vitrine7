@@ -319,7 +319,7 @@ describe("httpBarRepository", () => {
   });
 
   it("adiciona entrada do catálogo à comanda", async () => {
-    httpClient.put.mockResolvedValueOnce(tabResponse());
+    httpClient.post.mockResolvedValueOnce(tabResponse());
     const { httpBarRepository } =
       await import("./httpBarRepository");
 
@@ -332,8 +332,8 @@ describe("httpBarRepository", () => {
         }
       );
 
-    expect(httpClient.put).toHaveBeenCalledWith(
-      "/bar/tabs/31/catalog/5",
+    expect(httpClient.post).toHaveBeenCalledWith(
+      "/bar/tabs/31/catalog/5/add",
       { quantity: 2 }
     );
     expect(command.items[0]).toMatchObject({
@@ -343,7 +343,7 @@ describe("httpBarRepository", () => {
   });
 
   it("encaminha veículo e placa na inclusão de serviço", async () => {
-    httpClient.put.mockResolvedValueOnce(tabResponse());
+    httpClient.post.mockResolvedValueOnce(tabResponse());
     const { httpBarRepository } = await import("./httpBarRepository");
 
     await httpBarRepository.addCommandItem(31, {
@@ -352,7 +352,7 @@ describe("httpBarRepository", () => {
       vehiclePlate: "ABC1D23",
     });
 
-    expect(httpClient.put).toHaveBeenCalledWith("/bar/tabs/31/catalog/5", {
+    expect(httpClient.post).toHaveBeenCalledWith("/bar/tabs/31/catalog/5/add", {
       quantity: 1,
       vehicleName: "Onix prata",
       vehiclePlate: "ABC1D23",

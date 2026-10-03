@@ -20,7 +20,6 @@ public class CashClosingRepository {
     }
 
     public List<CashClosingResponse.Operation> operations(
-            long userId,
             OffsetDateTime start,
             OffsetDateTime endExclusive
     ) {
@@ -56,10 +55,6 @@ public class CashClosingRepository {
                         WHERE tab.status = 'CLOSED'
                           AND checkout.status = 'FINALIZED'
                           AND COALESCE(
-                                payment.approved_by_user_id,
-                                payment.created_by_user_id
-                              ) = :userId
-                          AND COALESCE(
                                 tab.closed_at,
                                 checkout.finalized_at,
                                 payment.approved_at,
@@ -77,7 +72,6 @@ public class CashClosingRepository {
                         ORDER BY completed_at ASC, operation_id ASC
                         """,
                 new MapSqlParameterSource()
-                        .addValue("userId", userId)
                         .addValue("start", start)
                         .addValue("endExclusive", endExclusive),
                 (resultSet, rowNumber) -> new CashClosingResponse.Operation(
@@ -95,7 +89,6 @@ public class CashClosingRepository {
     }
 
     public List<CashClosingResponse.PaymentBreakdown> paymentBreakdown(
-            long userId,
             OffsetDateTime start,
             OffsetDateTime endExclusive
     ) {
@@ -114,14 +107,12 @@ public class CashClosingRepository {
                         WHERE tab.status = 'CLOSED'
                           AND checkout.status = 'FINALIZED'
                           AND payment.status = 'APPROVED'
-                          AND COALESCE(payment.approved_by_user_id, payment.created_by_user_id) = :userId
                           AND COALESCE(tab.closed_at, checkout.finalized_at, payment.approved_at, tab.updated_at) >= :start
                           AND COALESCE(tab.closed_at, checkout.finalized_at, payment.approved_at, tab.updated_at) < :endExclusive
                         GROUP BY payment.method
                         ORDER BY amount_cents DESC, payment.method
                         """,
                 new MapSqlParameterSource()
-                        .addValue("userId", userId)
                         .addValue("start", start)
                         .addValue("endExclusive", endExclusive),
                 (rs, rowNum) -> new CashClosingResponse.PaymentBreakdown(
@@ -164,7 +155,6 @@ public class CashClosingRepository {
     }
 
     public OpenCommandsSummary openCommands(
-            long userId,
             OffsetDateTime start,
             OffsetDateTime endExclusive
     ) {
@@ -174,13 +164,11 @@ public class CashClosingRepository {
                             COUNT(*) AS command_count,
                             COALESCE(SUM(total_cents), 0) AS amount_cents
                         FROM bar_tabs
-                        WHERE created_by_user_id = :userId
-                          AND status IN ('OPEN', 'PAYMENT_PENDING')
+                        WHERE status IN ('OPEN', 'PAYMENT_PENDING')
                           AND created_at >= :start
                           AND created_at < :endExclusive
                         """,
                 new MapSqlParameterSource()
-                        .addValue("userId", userId)
                         .addValue("start", start)
                         .addValue("endExclusive", endExclusive),
                 (resultSet, rowNumber) -> new OpenCommandsSummary(

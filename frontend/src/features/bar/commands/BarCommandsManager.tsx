@@ -1449,10 +1449,9 @@ export function BarCommandsManager({
                             variant="secondary"
                             disabled={selectedCommand.status !== "open"}
                             onClick={() =>
-                              void onUpdateCommandItemQuantity(
+                              void onAddCommandItem(
                                 selectedCommand.id,
-                                item.key,
-                                item.quantity + 1
+                                { catalogItemId: item.catalogItemId, quantity: 1 }
                               )
                             }
                             leadingIcon={<Plus />}

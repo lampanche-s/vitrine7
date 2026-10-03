@@ -651,8 +651,8 @@ export const httpBarRepository: BarRepository = {
     input: AddBarCommandItemInput
   ) {
     const tab =
-      await httpClient.put<BarTabResponse>(
-        `/bar/tabs/${commandId}/catalog/${input.catalogItemId}`,
+      await httpClient.post<BarTabResponse>(
+        `/bar/tabs/${commandId}/catalog/${input.catalogItemId}/add`,
         {
           quantity:
             input.quantity ?? 1,

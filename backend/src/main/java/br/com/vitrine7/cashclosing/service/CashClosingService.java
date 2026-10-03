@@ -95,7 +95,6 @@ public class CashClosingService {
 
         List<CashClosingResponse.Operation> rawOperations =
                 repository.operations(
-                        principal.getId(),
                         period.start(),
                         period.endExclusive()
                 );
@@ -176,7 +175,6 @@ public class CashClosingService {
 
         List<CashClosingResponse.PaymentBreakdown> paymentBreakdown =
                 repository.paymentBreakdown(
-                        principal.getId(),
                         period.start(),
                         period.endExclusive()
                 );
@@ -188,7 +186,6 @@ public class CashClosingService {
 
         CashClosingRepository.OpenCommandsSummary openCommands =
                 repository.openCommands(
-                        principal.getId(),
                         period.start(),
                         period.endExclusive()
                 );

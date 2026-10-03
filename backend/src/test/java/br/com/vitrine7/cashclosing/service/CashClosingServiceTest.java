@@ -45,10 +45,10 @@ class CashClosingServiceTest {
     void summarizesOnlyApprovedSalesAndSeparatesReversals() {
         when(principal.getId()).thenReturn(7L);
         when(principal.getName()).thenReturn("Operador");
-        when(repository.openCommands(eq(7L), any(), any())).thenReturn(
+        when(repository.openCommands(any(), any())).thenReturn(
                 new CashClosingRepository.OpenCommandsSummary(2L, 1800L)
         );
-        when(repository.operations(eq(7L), any(), any())).thenReturn(List.of(
+        when(repository.operations(any(), any())).thenReturn(List.of(
                 operation(1L, "CASH", "APPROVED", 1000L, "2026-08-12T12:00:00Z"),
                 operation(2L, "PIX", "APPROVED", 2500L, "2026-08-12T13:00:00Z"),
                 operation(3L, "CASH", "REVERSED", 700L, "2026-08-12T14:00:00Z")
@@ -58,7 +58,7 @@ class CashClosingServiceTest {
                 line(2L, "SERVICE", "Lavagem", 1, 2500L, 2500L),
                 line(3L, "ITEM", "Refrigerante", 1, 700L, 700L)
         ));
-        when(repository.paymentBreakdown(eq(7L), any(), any())).thenReturn(List.of(
+        when(repository.paymentBreakdown(any(), any())).thenReturn(List.of(
                 new CashClosingResponse.PaymentBreakdown("CASH", 1000L, 1L),
                 new CashClosingResponse.PaymentBreakdown("PIX", 2500L, 1L)
         ));
@@ -86,10 +86,10 @@ class CashClosingServiceTest {
     void closeRegistersSnapshotForCurrentUser() {
         when(principal.getId()).thenReturn(7L);
         when(principal.getName()).thenReturn("Operador");
-        when(repository.openCommands(eq(7L), any(), any())).thenReturn(
+        when(repository.openCommands(any(), any())).thenReturn(
                 new CashClosingRepository.OpenCommandsSummary(2L, 1800L)
         );
-        when(repository.operations(eq(7L), any(), any())).thenReturn(List.of());
+        when(repository.operations(any(), any())).thenReturn(List.of());
         when(repository.operationLines(List.of())).thenReturn(List.of());
         when(repository.findClosedAt(eq(7L), any())).thenReturn(java.util.Optional.empty());
 
@@ -104,10 +104,10 @@ class CashClosingServiceTest {
         CashClosingService boundaryService = serviceAt("2026-08-28T05:00:00Z");
         when(principal.getId()).thenReturn(7L);
         when(principal.getName()).thenReturn("Operador");
-        when(repository.openCommands(eq(7L), any(), any())).thenReturn(
+        when(repository.openCommands(any(), any())).thenReturn(
                 new CashClosingRepository.OpenCommandsSummary(0L, 0L)
         );
-        when(repository.paymentBreakdown(eq(7L), any(), any())).thenReturn(List.of());
+        when(repository.paymentBreakdown(any(), any())).thenReturn(List.of());
         when(repository.operationLines(any())).thenReturn(List.of());
 
         List<CashClosingResponse.Operation> boundaryOperations = List.of(
@@ -119,9 +119,9 @@ class CashClosingServiceTest {
                 operation(6L, "PIX", "APPROVED", 600L, "2026-08-28T04:59:59-03:00"),
                 operation(7L, "PIX", "APPROVED", 700L, "2026-08-28T05:00:00-03:00")
         );
-        when(repository.operations(eq(7L), any(), any())).thenAnswer(invocation -> {
-            OffsetDateTime start = invocation.getArgument(1);
-            OffsetDateTime endExclusive = invocation.getArgument(2);
+        when(repository.operations(any(), any())).thenAnswer(invocation -> {
+            OffsetDateTime start = invocation.getArgument(0);
+            OffsetDateTime endExclusive = invocation.getArgument(1);
             return boundaryOperations.stream()
                     .filter(operation -> !operation.completedAt().isBefore(start))
                     .filter(operation -> operation.completedAt().isBefore(endExclusive))
