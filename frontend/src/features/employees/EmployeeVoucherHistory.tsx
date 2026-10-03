@@ -4,13 +4,13 @@ import {
   AnimatedModal,
   Button,
   ContentStack,
+  DateField,
   DropdownSelect,
   EmptyState,
   Pagination,
   PremiumCard,
   SearchField,
   SectionTitle,
-  TextField,
   useToast,
 } from "../../components/ui";
 import { repositories } from "../../data/repositories";
@@ -81,8 +81,8 @@ export function EmployeeVoucherHistory({ employees }: { employees: Employee[] })
     <SectionTitle title="Histórico de vales" subtitle="Consumos encerrados como Vale, sem movimentação financeira." />
     <PremiumCard><div className="grid gap-4 sm:grid-cols-3">
       <DropdownSelect label="Funcionário" value={employeeId} placeholder="Selecione o funcionário" options={[{ value: "", label: "Todos" }, ...employees.map((employee) => ({ value: String(employee.id), label: employee.name }))]} onChange={setEmployeeId} />
-      <TextField label="De" type="date" value={from} onChange={setFrom} />
-      <TextField label="Até" type="date" value={to} onChange={setTo} />
+      <DateField label="De" value={from} onChange={setFrom} />
+      <DateField label="Até" value={to} onChange={setTo} />
     </div></PremiumCard>
     <PremiumCard className="v7-card-fill" contentClassName="v7-card-content"><div className="flex min-h-0 flex-1 flex-col">
       <SearchField value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder="Buscar no histórico..." />

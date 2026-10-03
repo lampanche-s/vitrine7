@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ContentStack,
+  DateField,
   DropdownSelect,
   EmptyState,
   PremiumCard,
   SectionTitle,
-  TextField,
   useToast,
 } from "../../components/ui";
 import type { EmployeesRepository } from "../../data/contracts/employees.repository";
@@ -57,7 +57,7 @@ export function EmployeeVoucherReports({ employees, repository = repositories.em
     <PremiumCard><div className="grid gap-4 sm:grid-cols-2">
       <DropdownSelect label="Período" value={period} placeholder="Selecione o período" options={voucherReportPeriodOptions} onChange={(value) => setPeriod(value as VoucherReportPeriod)} />
       <DropdownSelect label="Funcionário" value={employeeFilter} placeholder="Selecione o funcionário" options={employeeOptions} onChange={setEmployeeFilter} />
-      {period === "custom" ? <><TextField label="Data inicial" type="date" value={from} onChange={setFrom} /><TextField label="Data final" type="date" value={to} onChange={setTo} /></> : null}
+      {period === "custom" ? <><DateField label="Data inicial" value={from} onChange={setFrom} /><DateField label="Data final" value={to} onChange={setTo} /></> : null}
     </div></PremiumCard>
     {error ? <EmployeeVoucherReportError message={error} /> : null}
     {loading ? <p className="text-sm text-[var(--text-subtle)]">Carregando relatório...</p> : null}

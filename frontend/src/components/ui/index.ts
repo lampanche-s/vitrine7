@@ -45,6 +45,7 @@ export {
 export {
   TextField,
 } from "./text-field";
+export { DateField } from "./date-field";
 export {
   TextAreaField,
 } from "./text-area-field";

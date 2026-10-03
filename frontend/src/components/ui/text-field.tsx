@@ -20,8 +20,7 @@ export function TextField({
     | "password"
     | "email"
     | "number"
-    | "tel"
-    | "date";
+    | "tel";
   disabled?: boolean;
   min?: number;
   max?: number;

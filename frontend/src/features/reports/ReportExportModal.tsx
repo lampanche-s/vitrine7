@@ -6,8 +6,8 @@ import {
 import {
   AnimatedModal,
   Button,
+  DateField,
   DropdownSelect,
-  TextField,
 } from "../../components/ui";
 
 import {
@@ -118,18 +118,16 @@ export function ReportExportModal({
 
         {period === "custom" ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextField
+            <DateField
               label="Data inicial"
-              type="date"
               value={customFrom}
               onChange={
                 onCustomFromChange
               }
             />
 
-            <TextField
+            <DateField
               label="Data final"
-              type="date"
               value={customTo}
               onChange={
                 onCustomToChange

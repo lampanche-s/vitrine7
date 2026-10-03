@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
-import { Button, ContentStack, DropdownSelect, PremiumCard, TextField } from "../../../components/ui";
+import { Button, ContentStack, DateField, DropdownSelect, PremiumCard } from "../../../components/ui";
 import type { ReportsRepository, SalesReport, SalesReportScope } from "../../../data/contracts";
 import { UnifiedReportExportActions } from "../../reports/UnifiedReportExportActions";
 import {
@@ -137,8 +137,8 @@ export function BarReports({ repository }: { repository: ReportsRepository }) {
             </div>
             {activePeriod === "custom" ? (
               <div className="grid flex-1 gap-4 sm:grid-cols-2">
-                <TextField label="Data inicial" type="date" value={customFrom} onChange={setCustomFrom} />
-                <TextField label="Data final" type="date" value={customTo} onChange={setCustomTo} />
+                <DateField label="Data inicial" value={customFrom} onChange={setCustomFrom} />
+                <DateField label="Data final" value={customTo} onChange={setCustomTo} />
               </div>
             ) : null}
             <Button size="compact" variant="secondary" leadingIcon={<RefreshCw />} disabled={isLoading} onClick={() => setReloadKey((value) => value + 1)}>Atualizar</Button>
