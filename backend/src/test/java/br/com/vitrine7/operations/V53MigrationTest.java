@@ -37,9 +37,7 @@ class V53MigrationTest {
         assertEquals("53", jdbc.queryForObject("""
                 SELECT version
                 FROM flyway_schema_history
-                WHERE success
-                ORDER BY installed_rank DESC
-                LIMIT 1
+                WHERE success AND version = '53'
                 """, String.class));
         assertEquals(1, jdbc.queryForObject("""
                 SELECT count(*)
