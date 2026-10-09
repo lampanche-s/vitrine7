@@ -1,6 +1,7 @@
 package br.com.vitrine7.print.service;
 
 import br.com.vitrine7.cashclosing.dto.CashClosingResponse;
+import br.com.vitrine7.cashclosing.service.CashClosingSummary;
 import br.com.vitrine7.common.config.BusinessProperties;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +19,6 @@ public class CashClosingTextRenderer {
     private static final int COLUMNS = 48;
     private static final String DIVIDER = "-".repeat(COLUMNS);
     private static final String SEPARATOR = "=".repeat(COLUMNS);
-    private static final NumberFormat CURRENCY =
-            NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
     private static final DateTimeFormatter DATE =
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME =
@@ -116,6 +115,78 @@ public class CashClosingTextRenderer {
         return String.join("\n", lines) + "\n";
     }
 
+    public String renderSummary(CashClosingResponse report) {
+        CashClosingSummary summary = CashClosingSummary.from(report.operations());
+        List<String> lines = new ArrayList<>();
+        String establishment = properties.establishment() == null
+                ? "Vitrine 7" : properties.establishment().name();
+
+        lines.add(SEPARATOR);
+        lines.add(center(hasText(establishment) ? establishment : "Vitrine 7"));
+        lines.add(center("RESUMO DO CAIXA"));
+        lines.add(SEPARATOR);
+        for (String operator : wrap("OPERADOR: " + normalize(report.userName()), COLUMNS)) {
+            lines.add(operator);
+        }
+        lines.add("PERIODO: " + DATE.format(report.businessDate()) + " 05:00");
+        lines.add("     ATE " + DATE.format(report.businessDate().plusDays(1)) + " 04:59");
+        appendSummarySection(lines, "ITENS", "SUBTOTAL DE ITENS", summary.items());
+        appendSummarySection(lines, "SERVICOS", "SUBTOTAL DE SERVICOS", summary.services());
+        lines.add(SEPARATOR);
+        lines.add(amount("TOTAL GERAL", currency(summary.itemTotalCents() + summary.serviceTotalCents())));
+        if (report.operations().stream()
+                .filter(operation -> "APPROVED".equals(operation.paymentStatus()))
+                .anyMatch(operation -> operation.lines().stream()
+                        .mapToLong(CashClosingResponse.Line::lineTotalCents).sum() != operation.amountCents())) {
+            lines.add("Valores com descontos rateados.");
+        }
+        lines.add(SEPARATOR);
+        lines.add(center("FIM DO RESUMO"));
+        lines.add(SEPARATOR);
+        return String.join("\n", lines) + "\n";
+    }
+
+    private void appendSummarySection(
+            List<String> lines,
+            String title,
+            String subtotalLabel,
+            List<CashClosingSummary.Entry> entries
+    ) {
+        lines.add(DIVIDER);
+        lines.add(title);
+        int quantityWidth = Math.max(5, entries.stream()
+                .mapToInt(entry -> Long.toString(entry.quantity()).length()).max().orElse(0));
+        int totalWidth = Math.max(12, entries.stream()
+                .mapToInt(entry -> currency(entry.totalCents()).length()).max().orElse(0));
+        int descriptionWidth = COLUMNS - quantityWidth - totalWidth - 2;
+        lines.add(padRight("DESCRICAO", descriptionWidth) + " "
+                + padLeft("QTD", quantityWidth) + " " + padLeft("TOTAL", totalWidth));
+        if (entries.isEmpty()) {
+            lines.add("Nenhum registro no periodo.");
+        }
+        for (CashClosingSummary.Entry entry : entries) {
+            List<String> description = wrap(entry.description(), descriptionWidth);
+            if (description.isEmpty()) {
+                description = List.of("-");
+            }
+            lines.add(padRight(description.get(0), descriptionWidth) + " "
+                    + padLeft(Long.toString(entry.quantity()), quantityWidth) + " "
+                    + padLeft(currency(entry.totalCents()), totalWidth));
+            for (int index = 1; index < description.size(); index++) {
+                lines.add(description.get(index));
+            }
+        }
+        lines.add(DIVIDER);
+        lines.add(amount("QUANTIDADE", Long.toString(entries.stream()
+                .mapToLong(CashClosingSummary.Entry::quantity).sum())));
+        lines.add(amount(subtotalLabel, currency(entries.stream()
+                .mapToLong(CashClosingSummary.Entry::totalCents).sum())));
+    }
+
+    private String padLeft(String value, int width) {
+        return " ".repeat(Math.max(0, width - value.length())) + value;
+    }
+
     private String paymentLabel(String method) {
         return switch (method) {
             case "CASH" -> "DINHEIRO";
@@ -141,7 +212,8 @@ public class CashClosingTextRenderer {
     }
 
     private String currency(long cents) {
-        return CURRENCY.format(BigDecimal.valueOf(cents, 2));
+        return NumberFormat.getCurrencyInstance(new Locale("pt", "BR"))
+                .format(BigDecimal.valueOf(cents, 2));
     }
 
     private String amount(String label, String value) {

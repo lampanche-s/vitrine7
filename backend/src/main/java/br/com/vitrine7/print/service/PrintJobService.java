@@ -175,6 +175,28 @@ public class PrintJobService {
     }
 
     @Transactional
+    public PrintJobDtos.Created createCashClosingSummary(
+            CashClosingDay day,
+            VitrineUserPrincipal principal
+    ) {
+        CashClosingResponse report = cashClosingService.get(day, principal);
+        String kind = PrintDocumentKind.CASH_CLOSING_SUMMARY.name();
+        PrintJobDtos.Created active = repository.findActiveCashClosing(
+                principal.getId(), report.businessDate(), kind
+        ).orElse(null);
+        if (active != null) {
+            return active;
+        }
+
+        UUID id = UUID.randomUUID();
+        repository.createCashClosing(
+                id, principal.getId(), report.businessDate(), kind,
+                cashClosingTextRenderer.renderSummary(report)
+        );
+        return new PrintJobDtos.Created(id, "PENDING");
+    }
+
+    @Transactional
     public PrintJobDtos.Delivery reserveNext() {
         OffsetDateTime now = OffsetDateTime.now(clock);
         return repository.reserveNext(now).orElse(null);

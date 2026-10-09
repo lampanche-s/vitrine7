@@ -145,10 +145,22 @@ export function useReceiptPrinter() {
     [runPrintJob]
   );
 
+  const printCashClosingSummary = useCallback(
+    async (day: "TODAY" | "YESTERDAY") => {
+      await runPrintJob(
+        `/cash-closing/${day}/summary-print-jobs`,
+        "Resumo impresso",
+        "O resumo de itens e serviços foi enviado para a impressora térmica."
+      );
+    },
+    [runPrintJob]
+  );
+
   return {
     isPrinting,
     printReceipt,
     printPrePaymentNote,
     printCashClosing,
+    printCashClosingSummary,
   };
 }

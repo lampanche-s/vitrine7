@@ -104,6 +104,7 @@ export function CashClosingContent({
   const {
     isPrinting,
     printCashClosing,
+    printCashClosingSummary,
   } = useReceiptPrinter();
   const {
     showToast,
@@ -198,6 +199,10 @@ export function CashClosingContent({
         <Button
           variant={day === "TODAY" ? "primary" : "secondary"}
           onClick={() => {
+            if (day === "TODAY") {
+              return;
+            }
+            setReport(null);
             setIsLoading(true);
             setDay("TODAY");
           }}
@@ -207,6 +212,10 @@ export function CashClosingContent({
         <Button
           variant={day === "YESTERDAY" ? "primary" : "secondary"}
           onClick={() => {
+            if (day === "YESTERDAY") {
+              return;
+            }
+            setReport(null);
             setIsLoading(true);
             setDay("YESTERDAY");
           }}
@@ -232,10 +241,18 @@ export function CashClosingContent({
         <Button
           variant="secondary"
           leadingIcon={<Printer />}
-          disabled={!report || isPrinting}
+          disabled={!report || isLoading || isPrinting}
           onClick={() => void printCashClosing(day)}
         >
           {isPrinting ? "Imprimindo..." : "Imprimir fechamento"}
+        </Button>
+        <Button
+          variant="secondary"
+          leadingIcon={<Printer />}
+          disabled={!report || isLoading || isPrinting}
+          onClick={() => void printCashClosingSummary(day)}
+        >
+          {isPrinting ? "Imprimindo..." : "Imprimir resumo"}
         </Button>
       </PageActions>
 

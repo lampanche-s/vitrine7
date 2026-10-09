@@ -271,6 +271,44 @@ class PrintJobServiceTest {
     }
 
     @Test
+    void queuesSummaryForSelectedDayWithItsOwnDocumentKind() {
+        VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
+        CashClosingResponse report = mock(CashClosingResponse.class);
+        LocalDate businessDate = LocalDate.of(2026, 10, 8);
+        String kind = PrintDocumentKind.CASH_CLOSING_SUMMARY.name();
+
+        when(principal.getId()).thenReturn(9L);
+        when(cashClosingService.get(CashClosingDay.YESTERDAY, principal)).thenReturn(report);
+        when(report.businessDate()).thenReturn(businessDate);
+        when(repository.findActiveCashClosing(9L, businessDate, kind)).thenReturn(Optional.empty());
+        when(cashClosingRenderer.renderSummary(report)).thenReturn("RESUMO\n");
+
+        PrintJobDtos.Created created = service.createCashClosingSummary(CashClosingDay.YESTERDAY, principal);
+
+        assertEquals("PENDING", created.status());
+        verify(repository).createCashClosing(created.id(), 9L, businessDate, kind, "RESUMO\n");
+    }
+
+    @Test
+    void reusesPendingSummaryInsteadOfQueueingAnotherCopy() {
+        VitrineUserPrincipal principal = mock(VitrineUserPrincipal.class);
+        CashClosingResponse report = mock(CashClosingResponse.class);
+        LocalDate businessDate = LocalDate.of(2026, 10, 9);
+        PrintJobDtos.Created pending = new PrintJobDtos.Created(UUID.randomUUID(), "PENDING");
+        when(principal.getId()).thenReturn(9L);
+        when(cashClosingService.get(CashClosingDay.TODAY, principal)).thenReturn(report);
+        when(report.businessDate()).thenReturn(businessDate);
+        when(repository.findActiveCashClosing(9L, businessDate, "CASH_CLOSING_SUMMARY"))
+                .thenReturn(Optional.of(pending));
+
+        assertEquals(pending, service.createCashClosingSummary(CashClosingDay.TODAY, principal));
+        verifyNoInteractions(cashClosingRenderer);
+        verify(repository, org.mockito.Mockito.never()).createCashClosing(
+                any(UUID.class), any(Long.class), any(LocalDate.class), any(String.class), any(String.class)
+        );
+    }
+
+    @Test
     void reservesPendingJobUsingCurrentClock() {
         UUID jobId = UUID.randomUUID();
         PrintJobDtos.Delivery delivery = new PrintJobDtos.Delivery(

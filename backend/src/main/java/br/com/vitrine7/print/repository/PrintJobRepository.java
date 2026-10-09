@@ -111,6 +111,16 @@ public class PrintJobRepository {
             LocalDate businessDate,
             String receiptText
     ) {
+        createCashClosing(id, requestedByUserId, businessDate, "CASH_CLOSING", receiptText);
+    }
+
+    public void createCashClosing(
+            UUID id,
+            Long requestedByUserId,
+            LocalDate businessDate,
+            String documentKind,
+            String receiptText
+    ) {
         jdbcTemplate.update(
                 """
                         INSERT INTO print_jobs (
@@ -126,7 +136,7 @@ public class PrintJobRepository {
                             NULL,
                             :requestedByUserId,
                             :businessDate,
-                            'CASH_CLOSING',
+                            :documentKind,
                             'PENDING',
                             :receiptText
                         )
@@ -135,6 +145,7 @@ public class PrintJobRepository {
                         .addValue("id", id)
                         .addValue("requestedByUserId", requestedByUserId)
                         .addValue("businessDate", businessDate)
+                        .addValue("documentKind", documentKind)
                         .addValue("receiptText", receiptText)
         );
     }
@@ -143,20 +154,29 @@ public class PrintJobRepository {
             long requestedByUserId,
             LocalDate businessDate
     ) {
+        return findActiveCashClosing(requestedByUserId, businessDate, "CASH_CLOSING");
+    }
+
+    public Optional<PrintJobDtos.Created> findActiveCashClosing(
+            long requestedByUserId,
+            LocalDate businessDate,
+            String documentKind
+    ) {
         return jdbcTemplate.query(
                 """
                         SELECT id, status
                         FROM print_jobs
                         WHERE requested_by_user_id = :requestedByUserId
                           AND business_date = :businessDate
-                          AND document_kind = 'CASH_CLOSING'
+                          AND document_kind = :documentKind
                           AND status IN ('PENDING', 'PRINTING')
                         ORDER BY created_at, id
                         LIMIT 1
                         """,
                 new MapSqlParameterSource()
                         .addValue("requestedByUserId", requestedByUserId)
-                        .addValue("businessDate", businessDate),
+                        .addValue("businessDate", businessDate)
+                        .addValue("documentKind", documentKind),
                 (resultSet, rowNumber) -> new PrintJobDtos.Created(
                         resultSet.getObject("id", UUID.class),
                         resultSet.getString("status")

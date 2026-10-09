@@ -137,8 +137,6 @@ public class CashClosingService {
                 .toList();
 
         long totalReceived = 0L;
-        long itemSalesCents = 0L;
-        long serviceSalesCents = 0L;
         long saleCount = 0L;
         long reversedCents = 0L;
         long reversedCount = 0L;
@@ -164,10 +162,6 @@ public class CashClosingService {
             totalReceived += operation.amountCents();
             saleCount++;
 
-            TypeAmounts typeAmounts = allocateByEntryType(operation);
-            itemSalesCents += typeAmounts.itemCents();
-            serviceSalesCents += typeAmounts.serviceCents();
-
             cashReceivedCents += operation.cashReceivedCents();
             cashChangeCents += operation.cashChangeCents();
 
@@ -179,6 +173,9 @@ public class CashClosingService {
                         period.endExclusive()
                 );
 
+        CashClosingSummary summary = CashClosingSummary.from(operations);
+        long itemSalesCents = summary.itemTotalCents();
+        long serviceSalesCents = summary.serviceTotalCents();
         long grossSalesCents = totalReceived + reversedCents;
         long averageTicketCents = saleCount == 0L
                 ? 0L
@@ -219,37 +216,6 @@ public class CashClosingService {
         );
     }
 
-    private TypeAmounts allocateByEntryType(CashClosingResponse.Operation operation) {
-        long itemSubtotal = operation.lines().stream()
-                .filter(line -> "ITEM".equals(line.entryType()))
-                .mapToLong(CashClosingResponse.Line::lineTotalCents)
-                .sum();
-        long serviceSubtotal = operation.lines().stream()
-                .filter(line -> "SERVICE".equals(line.entryType()))
-                .mapToLong(CashClosingResponse.Line::lineTotalCents)
-                .sum();
-        long classifiedSubtotal = itemSubtotal + serviceSubtotal;
-
-        if (classifiedSubtotal <= 0L) {
-            return new TypeAmounts(0L, 0L);
-        }
-        if (serviceSubtotal == 0L) {
-            return new TypeAmounts(operation.amountCents(), 0L);
-        }
-        if (itemSubtotal == 0L) {
-            return new TypeAmounts(0L, operation.amountCents());
-        }
-
-        long itemAmount = Math.round(
-                (double) operation.amountCents() * itemSubtotal / classifiedSubtotal
-        );
-        itemAmount = Math.max(0L, Math.min(operation.amountCents(), itemAmount));
-        return new TypeAmounts(
-                itemAmount,
-                operation.amountCents() - itemAmount
-        );
-    }
-
     OperationalPeriod resolveOperationalPeriod(CashClosingDay day) {
         ZonedDateTime now = ZonedDateTime.now(clock.withZone(businessZone));
         LocalDate currentBusinessDate = now.toLocalDate();
@@ -274,12 +240,6 @@ public class CashClosingService {
                 .atZone(businessZone)
                 .toOffsetDateTime();
         return new OperationalPeriod(businessDate, start, endExclusive);
-    }
-
-    private record TypeAmounts(
-            long itemCents,
-            long serviceCents
-    ) {
     }
 
     record OperationalPeriod(

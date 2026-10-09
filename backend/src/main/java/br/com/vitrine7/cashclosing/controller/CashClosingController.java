@@ -53,4 +53,12 @@ public class CashClosingController {
     ) {
         return service.close(day, principal);
     }
+
+    @PostMapping("/{day}/summary-print-jobs")
+    public PrintJobDtos.Created printSummary(
+            @PathVariable CashClosingDay day,
+            @AuthenticationPrincipal VitrineUserPrincipal principal
+    ) {
+        return printJobService.createCashClosingSummary(day, principal);
+    }
 }
